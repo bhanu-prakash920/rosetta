@@ -13,7 +13,10 @@ Built for the Connected Vehicle Intelligence hackathon, problem space
 "multi-OEM data normalisation". An independent academic project: all vehicles,
 people and makers in it are simulated.
 
-![The live console](docs/screenshots/live.png)
+To see the console, follow [Quick start](#quick-start) and open
+<http://127.0.0.1:8765/app>. Screenshots, diagrams and the solution document are
+build outputs and are not tracked here; [Generated files](#generated-files) has
+the commands that produce them.
 
 ## Results
 
@@ -133,6 +136,20 @@ The ones that switch between local and production adapters:
 | `ROSETTA_TELEMETRY_STORE` | `parquet` | `timescale` to also write the hypertable |
 | `ROSETTA_JWT_SECRET` | generated per process | required, 32 characters or more; or `ROSETTA_OIDC_JWKS_URL` for an identity provider |
 | `ANTHROPIC_API_KEY` | unset: deterministic agent | set: the agent is driven by Claude (`ROSETTA_LLM_MODEL`, default `claude-opus-5-5`) |
+
+## Generated files
+
+The repository tracks code, configuration and the measurements the numbers above
+cite. Images and the submission document are build outputs, so they are not
+tracked; each is produced from the code here:
+
+| Output | Command |
+|---|---|
+| `docs/diagrams/*.png` (architecture, ER, deployment, layers) | `.venv/bin/python scripts/draw_diagrams.py` |
+| `docs/diagrams/bench_*.png`, `ml_vs_baseline.png` | `.venv/bin/python scripts/draw_charts.py` |
+| `docs/screenshots/*.png` | `make run`, then `cd web && node scripts/screenshots.mjs http://127.0.0.1:8765 ../docs/screenshots` |
+| `docs/Rosetta_Solution_Document.docx` | `.venv/bin/python scripts/solution_doc/build.py` (needs the organisers' template in the repository root) |
+| Raw security scan reports | `make security`; the findings are summarised in [security/README.md](docs/evidence/security/README.md) |
 
 ## Known issues
 

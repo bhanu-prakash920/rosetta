@@ -30,3 +30,13 @@ infra/terraform/**/*.tfstate*
 # organiser material, not ours to redistribute
 Motorq_Hackathon_Problem_Statement.pdf
 Motorq_Hackathon_Solution_Document_Template.docx
+
+# build outputs: regenerable from the scripts in this repository (see README, "Generated files")
+docs/Rosetta_Solution_Document.docx
+docs/Rosetta_Solution_Document.pdf
+docs/screenshots/
+docs/diagrams/
+docs/sbom.txt
+# raw scan reports; the summary beside them is kept
+docs/evidence/security/*
+!docs/evidence/security/README.md
