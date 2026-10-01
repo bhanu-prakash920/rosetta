@@ -513,11 +513,16 @@ segment(ts, speed):                          # Viterbi, O(n)
     # ------------------------------------------------------------------ 13
     T["13. Demo Video (5 Minutes Maximum)"] = d.table(
         ["Time", "Segment", "What to Show"],
-        [["0:00 – 0:30", "Problem", "Six makers, one braking event written six ways (landing page). One number: every format change means lost data today."],
-         ["0:30 – 1:00", "Solution", "\"One canonical event from every maker, and a new maker joins without downtime.\" Architecture in one image."],
-         ["1:00 – 3:00", "Live Demo", "Live console at 100K vehicles. Start \"A new maker starts sending\": Helix parked. Run the agent: physics finds m/s; 200/200 known answers. Try on parked traffic, approve. Helix appears on the chart, dead letters drain, no restart. Then \"Firmware update\": canary v2 at 25% beside v1."],
-         ["3:00 – 4:15", "Under the Hood", "Kill a normaliser from the console: backlog rises and drains. Burst chart. Audit log with the chain intact; the agent's refused approval. Map as an analyst (masked)."],
-         ["4:15 – 5:00", "Impact & Next Steps", "Results table; limits stated; next steps; team."]],
+        [["0:00 – 0:45", "Problem", "Six makers, one braking event written six ways (landing page). Every format change means new code, a release, and data lost while it ships."],
+         ["0:45 – 1:15", "Solution", "\"One canonical event from every maker, and a new maker joins without downtime.\" Park, study, prove, approve, replay."],
+         ["1:15 – 2:45", "Live Pipeline", "Live console at 100K vehicles and about 100K events a second. Start \"A new maker starts sending\": Helix is parked with a reason, nothing dropped. Dead letters grouped into one format family, payloads in German."],
+         ["2:45 – 4:30", "The Agent", "Run the agent on Helix: it samples, profiles (physics finds metres per second), proposes, and tests itself on known answers. Every step shown with its input and output."],
+         ["4:30 – 5:15", "Approval", "Dry run on the real parked messages, then a person approves. Helix appears on the chart, the parked messages replay, no worker restarts."],
+         ["5:15 – 6:00", "Safe Rollout", "\"Firmware update\": canary v2 for a share of vehicles beside v1, both live at once."],
+         ["6:00 – 6:45", "Failure", "Kill a normaliser from the console: the backlog rises and drains, nothing lost or stored twice. Burst chart."],
+         ["6:45 – 7:40", "Privacy and Audit", "The same fleet as an analyst: locations masked to about 5 km. Audit trail with the hash chain intact, including the agent's refused approval."],
+         ["7:40 – 8:35", "Results", "Field mapping against the baseline; the results table; the architecture in one image."],
+         ["8:35 – 9:00", "Close", "Limits stated plainly, and what comes next."]],
         [1.2, 1.6, 6.2])
 
     AF["14. Repository Checklist"] = d.table(
