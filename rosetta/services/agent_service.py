@@ -1,13 +1,12 @@
 """Run the mapping agent and keep the record of what it did."""
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..agent import memory, workflow
+from ..agent import llm_agent, memory, workflow
 from ..agent.toolbox import Toolbox, label_for
 from ..config import get_settings
 from ..db.models import AgentRun
@@ -16,15 +15,39 @@ from . import audit, registry
 
 
 def choose_engine(requested: str = "auto") -> str:
-    """'claude' when credentials are configured, otherwise the deterministic workflow."""
+    """'model' when a provider has credentials, otherwise the deterministic workflow."""
     st = get_settings()
     want = requested if requested != "auto" else st.llm_provider
     if want in ("none", "workflow"):
         return "workflow"
-    has_key = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
-    if want in ("anthropic", "claude"):
-        return "claude"
-    return "claude" if has_key else "workflow"
+    # A named provider is taken at its word; "model" and "auto" look for credentials.
+    if want in ("anthropic", "claude", "google", "gemini"):
+        return "model"
+    return "model" if llm_agent.detect_provider() else "workflow"
+
+
+def llm_model_name() -> str | None:
+    """The model the console names, or None when no provider has credentials."""
+    provider = llm_agent.detect_provider()
+    return llm_agent.model_name(provider) if provider else None
+
+
+def engine_label(eng: str, provider: str | None = None) -> str:
+    """What the run records and the console shows: the engine, then the model that ran.
+
+    A provider named in the request is used as given, so the record says what actually
+    ran rather than what the environment happens to hold.
+    """
+    if eng != "model":
+        return "workflow (deterministic)"
+    provider = provider or llm_agent.detect_provider()
+    return f"model ({llm_agent.model_name(provider)})" if provider else "model"
+
+
+def _requested_provider(requested: str) -> str | None:
+    """A provider named in the request wins over the environment; otherwise let it choose."""
+    return {"anthropic": "anthropic", "claude": "anthropic",
+            "google": "google", "gemini": "google"}.get(requested)
 
 
 def run_agent(s: Session, oem_key: str, *, user_id: int | None = None, requested_by: str = "system",
@@ -32,18 +55,17 @@ def run_agent(s: Session, oem_key: str, *, user_id: int | None = None, requested
               client: Any = None) -> AgentRun:
     oem = registry.get_oem(s, oem_key)
     eng = choose_engine(engine)
+    provider = _requested_provider(engine)
     run = AgentRun(oem_id=oem.id, status="running", trigger=trigger, requested_by=user_id,
-                   engine="workflow (deterministic)" if eng == "workflow" else f"claude ({get_settings().llm_model})")
+                   engine=engine_label(eng, provider))
     s.add(run)
     s.flush()
     audit.record(s, actor_kind="user" if user_id else "service", actor=requested_by, action="agent.run.start",
                  resource=f"agent_run/{run.id}", detail={"oem": oem_key, "engine": run.engine, "trigger": trigger})
     tb = Toolbox(s, oem_key, run, label=label)
     try:
-        if eng == "claude":
-            from ..agent.claude_agent import run as run_claude
-
-            result = run_claude(tb, client=client)
+        if eng == "model":
+            result = llm_agent.run(tb, client=client, provider=provider)
             if result.get("status") == "unavailable":
                 # The model could not be reached. Fall back, and say so in the record.
                 run.engine = f"workflow (deterministic, after {result.get('reason', 'model unavailable')})"

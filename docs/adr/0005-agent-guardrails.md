@@ -12,8 +12,8 @@ produces plausible numbers that are 38 percent too low.
 ## Decision
 
 - **Two engines, one toolbox.** A deterministic workflow (always available, fully
-  reproducible) and a Claude tool-use loop (when credentials exist). Both call the
-  same seven tools in `rosetta/agent/toolbox.py`, so the model has no power the
+  reproducible) and a model-driven tool-use loop (when credentials exist). Both call
+  the same seven tools in `rosetta/agent/toolbox.py`, so the model has no power the
   workflow lacks.
 - **What the agent may do:** sample dead letters, profile fields, search the
   mapping memory, ask the classifier for a proposal, learn event codes from
@@ -33,13 +33,17 @@ produces plausible numbers that are 38 percent too low.
   live changes.
 - **Record.** Every tool call is stored with input, output and duration, and
   written to the hash-chained audit log.
-- **Claude API usage.** Model `claude-opus-5-5`, strict tool schemas, no forced tool
-  choice, `fallbacks: "default"` so a safety decline is retried on the recommended
-  fallback model, and any refusal or API error falls back to the deterministic
-  workflow with the reason recorded on the run.
+- **Provider is a detail.** Anthropic and Google are both wired
+  (`rosetta/agent/llm_agent.py`), chosen by whichever key is present and overridable
+  with `ROSETTA_LLM_PROVIDER`. Each gets the same system prompt, the same strict tool
+  schemas and no forced tool choice, and returns the same result shape, so nothing
+  downstream knows which ran. Any refusal or API error falls back to the deterministic
+  workflow with the reason recorded on the run. Adding a provider means one adapter,
+  not a change to the tools.
 
 ## Consequences
 
 - The agent is useful without a model, and better with one where statistics run out.
-- The Claude loop is tested against a stub client that checks the request shape.
-  It has not been run against the live API in this repository's evidence.
+- The model-driven loop is tested against a stub client per provider, each checking
+  that provider's request shape. Neither has been run against a live API in this
+  repository's evidence.

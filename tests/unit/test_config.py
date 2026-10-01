@@ -1,6 +1,7 @@
 """rosetta.config: settings come from the environment and nowhere else."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -98,3 +99,47 @@ def test_settings_can_be_built_directly():
     st = Settings(env="test", vehicles=3, data_dir=Path("/nowhere"))
     assert (st.env, st.vehicles, st.data_dir) == ("test", 3, Path("/nowhere"))
     assert config._int("ROSETTA_DOES_NOT_EXIST", 7) == 7 and config._env("ROSETTA_DOES_NOT_EXIST", "d") == "d"
+
+
+# ------------------------------------------------- .env, read only by the command line
+def test_env_file_supplies_model_credentials(tmp_path, monkeypatch):
+    from rosetta.__main__ import _load_env_file
+
+    (tmp_path / ".env").write_text("GEMINI_API_KEY=from-the-file\nROSETTA_LLM_PROVIDER=google\n")
+    for k in ("GEMINI_API_KEY", "ROSETTA_LLM_PROVIDER"):
+        monkeypatch.delenv(k, raising=False)
+    assert set(_load_env_file(str(tmp_path / ".env"))) == {"GEMINI_API_KEY", "ROSETTA_LLM_PROVIDER"}
+    assert os.environ["GEMINI_API_KEY"] == "from-the-file"
+
+
+def test_the_real_environment_beats_the_env_file(tmp_path, monkeypatch):
+    from rosetta.__main__ import _load_env_file
+
+    (tmp_path / ".env").write_text("GEMINI_API_KEY=from-the-file\n")
+    monkeypatch.setenv("GEMINI_API_KEY", "from-the-shell")
+    assert _load_env_file(str(tmp_path / ".env")) == []
+    assert os.environ["GEMINI_API_KEY"] == "from-the-shell"
+
+
+def test_the_env_file_cannot_change_a_local_run_it_was_not_meant_to(tmp_path, monkeypatch):
+    """.env configures the Compose stack. Its placeholders must not reach a local run:
+    the shipped ROSETTA_DEMO_PASSWORD would otherwise replace the documented one."""
+    from rosetta.__main__ import _load_env_file
+
+    (tmp_path / ".env").write_text(
+        "ROSETTA_DEMO_PASSWORD=change-me-demo-password\n"
+        "ROSETTA_JWT_SECRET=change-me-generate-with-openssl-rand-hex-32\n"
+        "POSTGRES_PASSWORD=change-me-postgres-password\n"
+        "GEMINI_API_KEY=from-the-file\n")
+    for k in ("ROSETTA_DEMO_PASSWORD", "ROSETTA_JWT_SECRET", "POSTGRES_PASSWORD", "GEMINI_API_KEY"):
+        monkeypatch.delenv(k, raising=False)
+    assert _load_env_file(str(tmp_path / ".env")) == ["GEMINI_API_KEY"]
+    assert "ROSETTA_DEMO_PASSWORD" not in os.environ
+    assert "ROSETTA_JWT_SECRET" not in os.environ
+    assert "POSTGRES_PASSWORD" not in os.environ
+
+
+def test_a_missing_env_file_is_not_an_error(tmp_path):
+    from rosetta.__main__ import _load_env_file
+
+    assert _load_env_file(str(tmp_path / "nothing-here")) == []

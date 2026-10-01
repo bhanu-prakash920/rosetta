@@ -7,7 +7,7 @@ flowchart LR
     V[Vehicles and OEM clouds<br/>six makers, six dialects] -- MQTT with mTLS / HTTPS --> R[Rosetta]
     R -- canonical events, alerts --> C[Customer systems<br/>fleets, lenders, dealers]
     U[Platform engineer<br/>analyst, fleet manager] -- browser, OAuth2 --> R
-    R -- tool-use requests --> L[Claude API<br/>optional]
+    R -- tool-use requests --> L[language model API<br/>optional]
     R -- tokens --> I[Identity provider<br/>OIDC, optional]
     R -- Parquet --> W[Warehouse or lake<br/>Snowflake, Spark, DuckDB]
 ```
@@ -132,7 +132,7 @@ rosetta/            the Python package
   pipeline/         gateway, MQTT gateway, workers, metrics, supervisor
   simulator/        100K-vehicle fleet, six dialects, fault injection
   ml/               field profiling, synthetic dialects, classifier, baseline, training
-  agent/            toolbox, deterministic workflow, Claude tool-use loop, vector memory
+  agent/            toolbox, deterministic workflow, model-driven tool-use loop, vector memory
   services/         registry, golden sets, audit chain, erasure, seeding
   api/              FastAPI app, security, routers
   batch/            analytics over the Parquet archive

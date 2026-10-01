@@ -284,8 +284,12 @@ services:
       ROSETTA_JWT_SECRET: ${ROSETTA_JWT_SECRET:?set ROSETTA_JWT_SECRET in .env}
       ROSETTA_CORS_ORIGINS: http://localhost:${API_PORT:-8080},http://127.0.0.1:${API_PORT:-8080}
       ROSETTA_LLM_PROVIDER: ${ROSETTA_LLM_PROVIDER:-auto}
-      # optional: without a key the agent runs its deterministic workflow
+      ROSETTA_LLM_MODEL: ${ROSETTA_LLM_MODEL:-}
+      # optional: without a key the agent runs its deterministic workflow. Set the
+      # one matching your provider; the agent uses whichever is present.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     ports:
       - "127.0.0.1:${API_PORT:-8080}:8000"
     depends_on:

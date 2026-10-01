@@ -11,7 +11,7 @@ flowchart LR
     D[Device / OEM cloud] -- TB1: internet, mTLS --> M[EMQX] --> G[gateway] --> K[(Kafka)]
     B[Browser] -- TB2: internet, TLS + OAuth2 --> A[API] --> PG[(PostgreSQL)]
     K --> W[workers] --> PG
-    AG[agent] -- TB3: untrusted content --> LLM[Claude API]
+    AG[agent] -- TB3: untrusted content --> LLM[language model API]
 ```
 
 ## STRIDE, per element

@@ -81,8 +81,10 @@ class Settings:
     mask_precision: int = field(default_factory=lambda: _int("ROSETTA_MASK_GEOHASH_PRECISION", 5))
 
     # agent
-    llm_provider: str = field(default_factory=lambda: _env("ROSETTA_LLM_PROVIDER", "auto"))  # auto | anthropic | none
-    llm_model: str = field(default_factory=lambda: _env("ROSETTA_LLM_MODEL", "claude-opus-5-5"))
+    # auto picks whichever provider has credentials. The model defaults to that
+    # provider's own default (rosetta/agent/llm_agent.py), so it is empty here.
+    llm_provider: str = field(default_factory=lambda: _env("ROSETTA_LLM_PROVIDER", "auto"))  # auto | anthropic | google | none
+    llm_model: str = field(default_factory=lambda: _env("ROSETTA_LLM_MODEL", ""))
     golden_pass_rate: float = field(default_factory=lambda: float(_env("ROSETTA_GOLDEN_PASS_RATE", "0.99")))
 
     @property

@@ -78,7 +78,7 @@ def context():
     d.box("ros", 38, 10, 24, 18, "Rosetta", sub="normalise, park, learn, replay", fill=INK, fg=PAPER)
     d.box("cust", 80, 26, 18, 8, "Customer systems", sub="fleets, lenders, dealers")
     d.box("lake", 80, 15, 18, 8, "Warehouse or lake", sub="Snowflake, Spark, DuckDB")
-    d.box("llm", 80, 4, 18, 8, "Claude API", sub="optional, for the agent")
+    d.box("llm", 80, 4, 18, 8, "model API", sub="optional, for the agent")
     d.box("idp", 44, 36, 12, 6, "Identity provider", sub="OIDC, optional")
     d.arrow("veh", "ros", "MQTT + mTLS, HTTPS", color=FLAME)
     d.arrow("users", "ros", "browser, OAuth2 bearer")

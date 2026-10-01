@@ -1,11 +1,18 @@
-"""The model-driven engine: Claude decides which tool to call next.
+"""The model-driven engine: a language model decides which tool to call next.
 
 Same toolbox as the deterministic workflow, so the model has no power the
 workflow does not have. What the model adds is judgement where statistics run
 out: a field whose name is a word in another language, two candidates the
 classifier cannot separate, an explanation a reviewer can read.
 
-Guardrails specific to this engine:
+Two providers are wired, chosen by whichever credentials are present:
+Anthropic (`ANTHROPIC_API_KEY`) and Google (`GEMINI_API_KEY` or
+`GOOGLE_API_KEY`). Both drive the same tools, with the same guardrails, and
+return the same result shape, so nothing downstream knows which one ran.
+`ROSETTA_LLM_PROVIDER` picks one explicitly; `ROSETTA_LLM_MODEL` overrides the
+default model for that provider.
+
+Guardrails, whichever provider runs:
   * Tools use strict schemas. The model picks field names and encodings from
     enumerations, it cannot write a transform or a path that does not exist.
   * A turn limit and the toolbox step limit bound cost and runaway loops.
@@ -15,13 +22,15 @@ Guardrails specific to this engine:
   * A refusal or an API failure ends the run cleanly and the service falls
     back to the deterministic workflow.
 
-Status: exercised in tests against a stub client (tests/unit/test_claude_agent.py).
-It has not been run against the live API in this repository's evidence, because
-no API credentials were available when the evidence was produced.
+Status: exercised in tests against stub clients for both providers
+(tests/integration/test_agent.py). Neither has been run against a live API in
+this repository's evidence, because no API credentials were available when the
+evidence was produced.
 """
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from ..config import get_settings
@@ -31,6 +40,12 @@ from .toolbox import Toolbox
 
 MAX_TURNS = 16
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
+
+# The default model per provider. ROSETTA_LLM_MODEL overrides whichever is chosen.
+DEFAULT_MODEL = {"anthropic": "claude-opus-5-5", "google": "gemini-2.5-pro"}
+# The environment variable each provider's SDK reads for its credentials.
+PROVIDER_KEYS = {"anthropic": ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"),
+                 "google": ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
 
 SYSTEM = """You are the mapping agent of Rosetta, a platform that translates vehicle telemetry \
 from many car makers into one canonical format.
@@ -130,10 +145,48 @@ def _dispatch(tb: Toolbox, name: str, args: dict[str, Any]) -> dict[str, Any]:
     return tb.call(name, **args)
 
 
-def run(tb: Toolbox, client: Any = None, max_turns: int = MAX_TURNS) -> dict[str, Any]:
+def detect_provider() -> str | None:
+    """The provider to use: the configured one, else whichever has credentials."""
+    want = (get_settings().llm_provider or "auto").lower()
+    if want == "none":
+        return None
+    # "claude" and "gemini" are accepted as friendly aliases for their providers.
+    want = {"claude": "anthropic", "gemini": "google"}.get(want, want)
+    if want in PROVIDER_KEYS:
+        return want
+    for provider, keys in PROVIDER_KEYS.items():
+        if any(os.environ.get(k) for k in keys):
+            return provider
+    return None
+
+
+def model_name(provider: str) -> str:
+    """The model to call. An explicit ROSETTA_LLM_MODEL wins, otherwise the default."""
+    return get_settings().llm_model or DEFAULT_MODEL.get(provider, "")
+
+
+def run(tb: Toolbox, client: Any = None, max_turns: int = MAX_TURNS,
+        provider: str | None = None) -> dict[str, Any]:
+    """Drive the toolbox with whichever provider is configured.
+
+    `client` is injected by the tests. Its provider is taken from `provider` when
+    given, so a stub never depends on which credentials happen to be in the
+    environment.
+    """
+    provider = provider or detect_provider()
+    if provider is None:
+        return {"status": "unavailable", "reason": "no model credentials are configured"}
+    if provider == "google":
+        return _run_google(tb, client, max_turns)
+    if provider == "anthropic":
+        return _run_anthropic(tb, client, max_turns)
+    return {"status": "unavailable", "reason": f"unknown provider {provider!r}"}
+
+
+def _run_anthropic(tb: Toolbox, client: Any, max_turns: int) -> dict[str, Any]:
     import anthropic
 
-    st = get_settings()
+    model = model_name("anthropic")
     if client is None:
         try:
             client = anthropic.Anthropic()
@@ -150,7 +203,7 @@ def run(tb: Toolbox, client: Any = None, max_turns: int = MAX_TURNS) -> dict[str
     for _turn in range(max_turns):
         try:
             resp = client.beta.messages.create(
-                model=st.llm_model,
+                model=model,
                 max_tokens=16000,
                 system=SYSTEM,
                 tools=TOOLS,
@@ -162,7 +215,7 @@ def run(tb: Toolbox, client: Any = None, max_turns: int = MAX_TURNS) -> dict[str
         except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as e:
             return _unavailable(tb, f"credentials rejected ({e.status_code})", tokens_in, tokens_out)
         except anthropic.NotFoundError:
-            return _unavailable(tb, f"model {st.llm_model!r} not found", tokens_in, tokens_out)
+            return _unavailable(tb, f"model {model!r} not found", tokens_in, tokens_out)
         except anthropic.RateLimitError:
             return _unavailable(tb, "rate limited", tokens_in, tokens_out)
         except anthropic.APIStatusError as e:
@@ -192,13 +245,18 @@ def run(tb: Toolbox, client: Any = None, max_turns: int = MAX_TURNS) -> dict[str
                             "is_error": "error" in out})
         messages.append({"role": "user", "content": results})   # all results in one message
 
+    return _finish(tb, final_text, tokens_in, tokens_out)
+
+
+def _finish(tb: Toolbox, final_text: str, tin: int, tout: int) -> dict[str, Any]:
+    """The same verdict whichever provider ran: did a draft reach review?"""
     if tb.submitted is None:
         if tb.steps == 0:
-            return _unavailable(tb, "the model did not use any tool", tokens_in, tokens_out)
+            return _unavailable(tb, "the model did not use any tool", tin, tout)
         return {"status": "failed", "reason": "the model finished without submitting a draft",
-                "summary": final_text, "tokens_in": tokens_in, "tokens_out": tokens_out}
+                "summary": final_text, "tokens_in": tin, "tokens_out": tout}
     return {"status": "submitted", "summary": final_text or "draft submitted",
-            "tokens_in": tokens_in, "tokens_out": tokens_out,
+            "tokens_in": tin, "tokens_out": tout,
             "result": {"version": tb.submitted.version, "state": tb.submitted.state}}
 
 
@@ -207,3 +265,110 @@ def _unavailable(tb: Toolbox, reason: str, tin: int, tout: int) -> dict[str, Any
         return {"status": "submitted", "summary": f"draft submitted; the model stopped early: {reason}",
                 "tokens_in": tin, "tokens_out": tout}
     return {"status": "unavailable", "reason": reason, "tokens_in": tin, "tokens_out": tout}
+
+
+# Gemini's function declarations take an OpenAPI-shaped schema, which has no place for
+# the two keywords the Anthropic tools carry, so they are dropped on the way through.
+_DROP = ("additionalProperties", "strict")
+
+
+def _schema(node: Any) -> Any:
+    if isinstance(node, dict):
+        return {k: _schema(v) for k, v in node.items() if k not in _DROP}
+    if isinstance(node, list):
+        return [_schema(v) for v in node]
+    return node
+
+
+def _google_tools() -> Any:
+    from google.genai import types
+
+    decls = [types.FunctionDeclaration(name=t["name"], description=t["description"],
+                                       parameters=_schema(t["input_schema"]) or None)
+             for t in TOOLS]
+    return [types.Tool(function_declarations=decls)]
+
+
+def _run_google(tb: Toolbox, client: Any, max_turns: int) -> dict[str, Any]:
+    from google import genai
+    from google.genai import errors, types
+
+    model = model_name("google")
+    if client is None:
+        try:
+            client = genai.Client()
+        except Exception as e:        # the SDK raises ValueError when no key is set
+            return {"status": "unavailable", "reason": f"no credentials: {type(e).__name__}"}
+
+    contents: list[Any] = [types.Content(role="user", parts=[types.Part(
+        text=f"Source '{tb.oem}' is sending messages the platform cannot read. Work out the mapping, "
+             "validate it, and submit one draft for review.")])]
+    # The loop is ours, so the SDK must not try to call anything itself.
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM,
+        tools=_google_tools(),
+        max_output_tokens=16000,
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+    )
+    tokens_in = tokens_out = 0
+    final_text = ""
+    for _turn in range(max_turns):
+        try:
+            resp = client.models.generate_content(model=model, contents=contents, config=config)
+        except errors.ClientError as e:
+            status = getattr(e, "code", None) or getattr(e, "status", None)
+            if status in (401, 403):
+                return _unavailable(tb, f"credentials rejected ({status})", tokens_in, tokens_out)
+            if status == 404:
+                return _unavailable(tb, f"model {model!r} not found", tokens_in, tokens_out)
+            if status == 429:
+                return _unavailable(tb, "rate limited", tokens_in, tokens_out)
+            return _unavailable(tb, f"API error {status}", tokens_in, tokens_out)
+        except errors.ServerError as e:
+            return _unavailable(tb, f"API error {getattr(e, 'code', None) or 'server'}", tokens_in, tokens_out)
+        except errors.APIError as e:
+            return _unavailable(tb, f"API error {getattr(e, 'code', None) or type(e).__name__}",
+                                tokens_in, tokens_out)
+        except (ConnectionError, TimeoutError):
+            return _unavailable(tb, "network error", tokens_in, tokens_out)
+
+        usage = getattr(resp, "usage_metadata", None)
+        tokens_in += int(getattr(usage, "prompt_token_count", 0) or 0)
+        tokens_out += int(getattr(usage, "candidates_token_count", 0) or 0)
+
+        cand = (resp.candidates or [None])[0]
+        if cand is not None and getattr(cand, "finish_reason", None) == "SAFETY":
+            return _unavailable(tb, "the model declined the request", tokens_in, tokens_out)
+        # Keep the model's turn exactly as it came back, and never edit earlier turns.
+        if cand is not None and getattr(cand, "content", None) is not None:
+            contents.append(cand.content)
+
+        calls = list(resp.function_calls or [])
+        if not calls:
+            final_text = (_text_of(resp) or "").strip()
+            break
+        parts = []
+        for c in calls:
+            out = _dispatch(tb, c.name, dict(c.args or {}))
+            # The response must be a dict, and large tool output is trimmed the same
+            # way as on the other provider.
+            parts.append(types.Part.from_function_response(name=c.name,
+                                                           response=_trimmed(out)))
+        contents.append(types.Content(role="user", parts=parts))   # all results in one turn
+
+    return _finish(tb, final_text, tokens_in, tokens_out)
+
+
+def _text_of(resp: Any) -> str:
+    try:
+        return resp.text or ""
+    except Exception:
+        return ""
+
+
+def _trimmed(out: dict[str, Any], limit: int = 60_000) -> dict[str, Any]:
+    """A tool result small enough to send. Gemini needs a dict, so it stays wrapped."""
+    blob = json.dumps(out, default=str)
+    if len(blob) <= limit:
+        return {"result": out}
+    return {"result": {"truncated": blob[:limit]}}

@@ -197,9 +197,11 @@ def main() -> None:
                 and (style == "ListParagraph" or t.strip().startswith(GUIDANCE_PREFIXES)):
             dropped.append(t.strip())
             continue
-        # cover page fields
+        # cover page fields. The labels are compared unescaped, so a content.py key can
+        # be written the way the page reads it ("Team Members & Roles:", not "&amp;").
+        plain = t.replace("&amp;", "&")
         for label, value in sections["cover"].items():
-            if t.startswith(label) and value is not None:
+            if plain.startswith(label) and value is not None:
                 b = re.sub(r'(<w:r><w:rPr><w:color w:val="595959"/></w:rPr><w:t>)[^<]*(</w:t>)',
                            lambda m, v=value: m.group(1) + escape(v) + m.group(2), b, count=1)
         if b.startswith("<w:tbl>") and current in sections["tables"]:

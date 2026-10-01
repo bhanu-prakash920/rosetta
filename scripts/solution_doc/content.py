@@ -52,7 +52,7 @@ def build_sections(d: Any, ev: Path, root: Path) -> dict[str, Any]:
             f"target; {n(st_a['simulator_sent'])} events and {st_a['unaccounted']} unaccounted. Four worker processes killed with "
             f"SIGKILL under load: all recovered, nothing lost, nothing stored twice. The field-mapping model is "
             f"{ms['exact_label_accuracy']:.1%} correct on formats whose names it never saw, against {bs['exact_label_accuracy']:.1%} "
-            f"for a name-matching baseline. {cov['meta'] and ''}{n(2755)} automated tests, {cov_pct:.0f}% line coverage. The production stack runs from one command in Docker Compose, and a restart or SIGKILL of the MQTT gateway under load loses nothing."),
+            f"for a name-matching baseline. {cov['meta'] and ''}{n(2761)} automated tests, {cov_pct:.0f}% line coverage. The production stack runs from one command in Docker Compose, and a restart or SIGKILL of the MQTT gateway under load loses nothing."),
         d.p("**What is new.** Mappings are data from a whitelist, compiled to specialised code at run time, so an agent can propose "
             "one without being able to run arbitrary code. The agent identifies units from physics: a field always 0.278 times the "
             "GPS-derived speed is metres per second, whatever it is called. And onboarding is zero downtime by construction: park, "
@@ -157,7 +157,7 @@ def build_sections(d: Any, ev: Path, root: Path) -> dict[str, Any]:
         ["F-01", "Normalise six OEM dialects", "As a customer I want one event format so that I never parse a maker's format", "Must", "Done", "rosetta/engine/", "1:20"],
         ["F-02", "100K-vehicle simulator with faults", "As an engineer I want realistic duplicates, reordering, outages and malformed data so that the pipeline is tested honestly", "Must", "Done", "rosetta/simulator/", "1:05"],
         ["F-03", "Dead-letter parking with reasons and families", "As an engineer I want unreadable messages kept and grouped so that nothing is lost and I see the problem, not 40,000 rows", "Must", "Done", "rosetta/pipeline/dlq.py", "1:45"],
-        ["F-04", "Mapping agent (deterministic and Claude)", "As an engineer I want a proposed mapping with evidence so that onboarding takes minutes", "Must", "Done", "rosetta/agent/", "2:05"],
+        ["F-04", "Mapping agent (deterministic and model-driven)", "As an engineer I want a proposed mapping with evidence so that onboarding takes minutes", "Must", "Done", "rosetta/agent/", "2:05"],
         ["F-05", "Golden-set validation with hold-out", "As a reviewer I want proof a mapping is right so that I approve with confidence", "Must", "Done", "rosetta/services/golden.py", "2:30"],
         ["F-06", "Hot reload, canary, auto rollback", "As an engineer I want a new version live for a share of vehicles without a restart so that a mistake stays small", "Must", "Done", "rosetta/engine/router.py", "2:45"],
         ["F-07", "Replay of parked messages", "As a customer I want the data from before the mapping existed so that there is no gap", "Must", "Done", "rosetta/pipeline/dlq.py", "2:50"],
@@ -194,7 +194,7 @@ def build_sections(d: Any, ev: Path, root: Path) -> dict[str, Any]:
          ["Stream / Batch Processing", "Python workers with consumer groups; Arrow and Parquet for batch", "Consumer groups scale by adding replicas. Flink rejected for the hackathon: operational weight for logic that is per-event. Batch jobs read Parquet with pyarrow; the same files work in Spark, DuckDB, Snowflake."],
          ["Relational / NoSQL / Cache / Search / Vector", "PostgreSQL (3NF), Redis, Parquet on S3, optional TimescaleDB, pgvector", "Each justified in ADR 0002 with its CAP choice. Cassandra rejected: Parquet on S3 is cheaper for write-once history. A separate vector database rejected: pgvector sits next to the registry."],
          ["Backend / Frontend", "FastAPI, SQLAlchemy 2; React, TypeScript, Vite, Leaflet", "FastAPI gives OpenAPI and validation for free. React for the console; no chart library: charts are hand-written SVG, small and themeable."],
-         ["ML / AI", "scikit-learn ExtraTrees; Hungarian assignment; Claude (claude-opus-5-5) via tool use, optional", "A tree ensemble on 304 features is fast, needs no GPU, and is explainable per feature. The language model is optional: a deterministic workflow uses the same tools."],
+         ["ML / AI", "scikit-learn ExtraTrees; Hungarian assignment; a language model via tool use (Anthropic or Google), optional", "A tree ensemble on 304 features is fast, needs no GPU, and is explainable per feature. The language model is optional: a deterministic workflow uses the same tools."],
          ["Infrastructure / CI-CD / Observability", "Docker, Compose, Helm, Terraform (AWS), GitHub Actions; Prometheus, Grafana, Loki with Alloy, Tempo, OpenTelemetry, JSON logs; Pact", "Standard, cloud-agnostic pieces. No cloud SDK in the application: Kafka, PostgreSQL, Redis, S3 API and OIDC are available everywhere."]],
         [1.6, 2.4, 5])
     sq = sql["cases"] if sql else []
@@ -285,12 +285,12 @@ scripts/        benchmarks, OpenAPI export, SQL optimisation, diagrams"""),
         ["Pattern", "Problem It Solves in Your System", "Location in Code"],
         [["Adapter", "Each OEM payload format to one canonical event; each store behind one interface", "engine/compiler.py, adapters/"],
          ["Interpreter + code generation", "Mapping specs as data, executed fast", "engine/compiler.py, engine/codegen.py"],
-         ["Strategy", "Decoders by wire format; agent engines (workflow or Claude)", "engine/decoders.py, services/agent_service.py"],
+         ["Strategy", "Decoders by wire format; agent engines (workflow or model); model providers behind one interface", "engine/decoders.py, services/agent_service.py"],
          ["Repository / Unit of Work", "Registry and audit changes commit together", "services/registry.py, db/session.py"],
          ["Event sourcing (light)", "Mapping history is an append-only action log; state is derived", "db/models.py MappingAction"],
          ["CQRS", "Writes go through the pipeline; reads from hot state, archive and rollups", "pipeline/processor.py, api/routers/fleet.py"],
          ["Outbox-like atomic write", "Parquet file carries its consumer offsets", "adapters/archive.py"],
-         ["Circuit breaker / fallback", "Claude errors or refusals fall back to the workflow; registry unreachable keeps the last table", "agent/claude_agent.py, pipeline/normalizer_worker.py"],
+         ["Circuit breaker / fallback", "Model errors or refusals fall back to the workflow; registry unreachable keeps the last table", "agent/llm_agent.py, pipeline/normalizer_worker.py"],
          ["Observer / pub-sub", "Workers publish metric snapshots; the API aggregates", "pipeline/metrics.py"],
          ["Supervisor", "Restart crashed workers in local mode", "pipeline/runtime.py"]],
         [2, 4.4, 2.6])
@@ -427,7 +427,7 @@ segment(ts, speed):                          # Viterbi, O(n)
          ["Compliance & Chaos", "erasure and audit-chain tests; SIGKILL chaos script; gateway restart and SIGKILL in Compose", "6 checks + 1", "all pass: 0 lost, 0 duplicated; 615,464 of 615,464 over MQTT", "Yes"]],
         [1.8, 3.2, 1.4, 1.8, 0.8], size=15)
     AF["9. Test Strategy"] = "".join([
-        d.p(f"**Coverage:** {cov_pct:.1f}% of lines over every suite that needs no Docker (2,755 tests)."),
+        d.p(f"**Coverage:** {cov_pct:.1f}% of lines over every suite that needs no Docker (2,761 tests)."),
         d.p("**Edge cases covered:** duplicates up to 30%, out-of-order delivery, events older than the dedup window, truncated and empty "
             "payloads, corrupted VIN check digits, oversize payloads, unknown sources, format drift for part of a fleet, a worker killed "
             "between batches, after producing but before committing, and after writing a file but before committing; a replay run twice; "
@@ -471,7 +471,7 @@ segment(ts, speed):                          # Viterbi, O(n)
             "Hungarian algorithm turns probabilities into a one-to-one assignment. The agent has seven tools: sample dead letters, profile "
             "fields (with physics), search mapping memory (pgvector, HNSW cosine), suggest mapping, learn event codes, validate on the "
             "development half of the golden set, submit one draft. A deterministic workflow uses them in a fixed order with a repair loop; "
-            "with an API key, Claude (`claude-opus-5-5`) drives the same tools with strict schemas."),
+            "with an API key, a language model drives the same tools with strict schemas: Anthropic and Google are both wired, chosen by whichever key is set."),
         d.image(dg / "ml_vs_baseline.png", 6.2, "Model against the name-matching baseline on formats with names never seen in training."),
         d.table(["Metric", "Model", "Baseline"],
                 [["field and unit right", f"{ms['exact_label_accuracy']:.1%}", f"{bs['exact_label_accuracy']:.1%}"],
@@ -483,7 +483,7 @@ segment(ts, speed):                          # Viterbi, O(n)
         d.p("**Guardrails and cost.** Hallucination is checked, not trusted: a draft becomes `validated` only at 99% or more of known answers "
             "including a hold-out half; a person approves; canary with automatic rollback. Failures: refusal or API error falls back to the "
             "deterministic engine with the reason on the run record; a step limit (40) and turn limit (16) bound cost. Cost: the deterministic "
-            "engine runs in under 1 s locally at no API cost. The Claude engine sends a few thousand tokens per turn for 4 to 8 turns, a few "
+            "engine runs in under 1 s locally at no API cost. The model-driven engine sends a few thousand tokens per turn for 4 to 8 turns, a few "
             "cents per onboarding at list prices; it was tested against a stub client, not the live API (no key was available)."),
         d.p("**Limit.** All formats come from one simulator; real OEM feeds are messier. Expect lower accuracy, which the golden set and "
             "the human gate are there to catch."),
@@ -498,7 +498,7 @@ segment(ts, speed):                          # Viterbi, O(n)
                  ["0004", "Registry epoch hot reload, canary routing by device hash, replay of parked messages", "Zero-downtime onboarding; several versions live at once"],
                  ["0005", "The agent proposes, people decide; one toolbox for two engines", "Useful without a model; the model adds judgement, never power"]],
                 [0.6, 4.4, 4]),
-        d.p("**Risks and technical debt.** Everything was measured on one laptop with the local adapters, not on a cluster. The Claude "
+        d.p("**Risks and technical debt.** Everything was measured on one laptop with the local adapters, not on a cluster. The model-driven "
             "engine is untested against the live API. The Compose stack was run end to end; the Helm chart and Terraform were validated with "
             "their tools but not installed or applied. The model's accuracy "
             "is on synthetic formats. Python caps per-core throughput (about 25,000 events per second per normaliser); a compiled normaliser "
@@ -506,7 +506,7 @@ segment(ts, speed):                          # Viterbi, O(n)
             "keeps the token in session storage)."),
         d.p("**Next three steps to a pilot.** (1) Install the Helm chart on a managed cluster, and repeat the benchmarks at 3x for "
             "five minutes with real Kafka (`make bench-burst` is ready; this laptop was too loaded to run it fairly). (2) Put one real OEM feed from an open dataset through the agent, and build "
-            "its golden set from hand-labelled samples. (3) Enable the Claude engine and compare it with the deterministic one on formats "
+            "its golden set from hand-labelled samples. (3) Enable the model-driven engine and compare it with the deterministic one on formats "
             "the model finds hard."),
     ])
 
@@ -547,7 +547,7 @@ segment(ts, speed):                          # Viterbi, O(n)
                  "Leaflet (MIT/BSD-2), Manrope and JetBrains Mono fonts (OFL). Infrastructure images: Kafka, PostgreSQL, TimescaleDB, "
                  "pgvector, Redis, EMQX, MinIO, Prometheus, Grafana. `make sbom` writes the installed versions."),
         d.bullet("**AI tools used:** Claude (Anthropic) as a coding assistant for implementation, tests, infrastructure files and "
-                 "documentation, and as an optional runtime component of the mapping agent (Claude API)."),
+                 "documentation. A language model is an optional runtime component of the mapping agent, which speaks to Anthropic or Google depending on the key provided."),
         d.bullet("**Data:** all vehicles, drivers, tenants and makers are synthetic; e-mail addresses use the reserved `.example` domain; "
                  "no real personal or vehicle-owner data is used."),
         d.bullet("**Assets:** one photograph is from Wikimedia Commons (CC BY 2.0, credited on the landing page and in "
@@ -562,7 +562,12 @@ segment(ts, speed):                          # Viterbi, O(n)
             "security/threat-model.md; evidence in docs/evidence."),
     ])
 
-    cover = {"Problem Space Chosen:": "Multi-OEM data normalisation: onboarding new and changed OEM formats without downtime",
+    # An individual entry: one name, no team.
+    cover = {"To be Submitted by:": "Bhanu Prakash Kusha",
+             "Team Members & Roles:": "Bhanu Prakash Kusha, sole contributor "
+                                      "(architecture, implementation, tests, documentation), "
+                                      "mrupatel1@googlemail.com",
+             "Problem Space Chosen:": "Multi-OEM data normalisation: onboarding new and changed OEM formats without downtime",
              "Repository URL:": "https://github.com/bhanu-prakash920/rosetta",
              "Date of Submission:": "01/10/2026"}
     return {"cover": cover, "answers": A, "tables": T, "after": AF, "video": None}

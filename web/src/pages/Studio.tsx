@@ -22,8 +22,8 @@ export default function Studio() {
   const nav = useNavigate();
   const can = useCan();
   const oems = useApi<{ items: OemT[] }>("/oems", 4000);
-  const model = useApi<{ engine: string; meta: any }>("/agent/model");
-  const [engine, setEngine] = useState<"auto" | "workflow" | "claude">("auto");
+  const model = useApi<{ engine: string; llm: string | null; meta: any }>("/agent/model");
+  const [engine, setEngine] = useState<"auto" | "workflow" | "model">("auto");
   const k = oem ?? oems.data?.items.find((o) => o.open_dead_letters > 0 && o.active_versions.length === 0)?.key
     ?? oems.data?.items.find((o) => o.pending_review.length > 0)?.key ?? oems.data?.items[0]?.key;
   const runs = useApi<{ items: AgentRun[] }>(k ? `/agent/runs?oem=${encodeURIComponent(k)}` : null, 4000);
@@ -47,7 +47,7 @@ export default function Studio() {
       <Head kicker="Mapping studio" title={<>teach it a <em>new dialect</em></>}
         lede="The agent studies messages nobody could read, proposes how each field maps to the canonical event, and proves it on known answers. It can only propose. A person approves."
         right={can.operate && <>
-          <Seg value={engine} onChange={setEngine} options={[{ v: "auto", l: "Auto" }, { v: "workflow", l: "Deterministic" }, { v: "claude", l: "Claude" }]} />
+          <Seg value={engine} onChange={setEngine} options={[{ v: "auto", l: "Auto" }, { v: "workflow", l: "Deterministic" }, { v: "model", l: "Model" }]} />
           <button className="btn flame" disabled={!k || act.busy === "agent"} onClick={start}>{act.busy === "agent" ? "Working" : "Run the agent"}</button>
         </>}>
         <div className="row wrap-x" style={{ marginTop: 20, gap: 6 }}>
@@ -64,8 +64,8 @@ export default function Studio() {
 
       {model.data && (
         <div className="banner info" style={{ marginBottom: 16 }}>
-          Engine in use when set to Auto: <b>{model.data.engine === "claude" ? "Claude, driving the tools itself" : "deterministic workflow"}</b>.
-          {model.data.engine !== "claude" && " No model credentials are configured, so the tools run in a fixed order. Set ANTHROPIC_API_KEY to let Claude drive them."}
+          Engine in use when set to Auto: <b>{model.data.engine === "model" ? `${model.data.llm ?? "a language model"}, driving the tools itself` : "deterministic workflow"}</b>.
+          {model.data.engine !== "model" && " No model credentials are configured, so the tools run in a fixed order. Set an API key for any supported provider to let a model drive them."}
         </div>
       )}
       {o?.wire_format === "protobuf" && (

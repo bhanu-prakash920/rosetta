@@ -33,7 +33,40 @@ def _seed(vehicles: int) -> None:
     make_hot_state(vins, writable=True).close()      # create the state file before workers map it
 
 
+# Read from .env by a local run. Deliberately only the model credentials: the rest of
+# that file configures the Compose stack, and some of it would quietly change a local
+# run if it were applied here. ROSETTA_DEMO_PASSWORD is the clearest example, where the
+# shipped placeholder would replace the password the README documents.
+ENV_FILE_KEYS = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "GEMINI_API_KEY",
+                 "GOOGLE_API_KEY", "ROSETTA_LLM_PROVIDER", "ROSETTA_LLM_MODEL")
+
+
+def _load_env_file(path: str = ".env") -> list[str]:
+    """Fill in missing model credentials from .env. Returns the names that were set.
+
+    Only the command line does this, never an imported module, so a developer's .env
+    cannot reach the tests. The real environment wins: the file fills gaps, it never
+    overrides what the shell already set.
+    """
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
+        return []
+    try:
+        values = dotenv_values(path)
+    except OSError:
+        return []
+    taken = []
+    for key in ENV_FILE_KEYS:
+        value = (values.get(key) or "").strip()
+        if value and not os.environ.get(key):
+            os.environ[key] = value
+            taken.append(key)
+    return taken
+
+
 def main(argv: list[str] | None = None) -> int:
+    _load_env_file()
     ap = argparse.ArgumentParser(prog="rosetta", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -50,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("train")
     ag = sub.add_parser("agent")
     ag.add_argument("oem")
-    ag.add_argument("--engine", default="auto", choices=["auto", "workflow", "claude"])
+    ag.add_argument("--engine", default="auto", choices=["auto", "workflow", "model", "anthropic", "google"])
     sub.add_parser("verify")
     a, rest = ap.parse_known_args(argv)
 

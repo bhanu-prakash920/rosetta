@@ -1,7 +1,8 @@
 """The mapping agent on the two demo cases, its repair loop, and the model-driven engine
-against a stub of the Claude client."""
+against a stub client for each supported provider."""
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from typing import Any
 
@@ -262,7 +263,7 @@ def reply(*blocks, stop="tool_use"):
                            usage=SimpleNamespace(input_tokens=1200, output_tokens=300))
 
 
-def test_claude_engine_drives_the_tools(parked: World):
+def test_the_model_engine_drives_the_tools(parked: World):
     import json
 
     def submit_from_suggestion(msgs):
@@ -281,9 +282,9 @@ def test_claude_engine_drives_the_tools(parked: World):
         reply(SimpleNamespace(type="text", text="Mapped 14 fields. Review the event codes first."), stop="end_turn"),
     ])
     with session_scope() as s:
-        run = agent_service.run_agent(s, "helix", requested_by="test", engine="claude", client=stub)
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="anthropic", client=stub)
         assert run.status == "awaiting_approval", run.summary
-        assert run.engine.startswith("claude") and run.tokens_in == 4800 and run.tokens_out == 1200
+        assert run.engine.startswith("model") and run.tokens_in == 4800 and run.tokens_out == 1200
         assert "Review the event codes" in run.summary
         tools = [st.tool for st in s.execute(select(AgentStep).where(AgentStep.run_id == run.id)
                                              .order_by(AgentStep.seq)).scalars()]
@@ -294,17 +295,17 @@ def test_claude_engine_drives_the_tools(parked: World):
         assert [c["n"] for c in stub.calls] == [1, 3, 5, 7]
 
 
-def test_claude_refusal_falls_back_to_the_workflow(parked: World):
+def test_a_model_refusal_falls_back_to_the_workflow(parked: World):
     stub = StubClaude([SimpleNamespace(content=[], stop_reason="refusal",
                                        stop_details=SimpleNamespace(category=None, explanation=""),
                                        usage=SimpleNamespace(input_tokens=10, output_tokens=0))])
     with session_scope() as s:
-        run = agent_service.run_agent(s, "helix", requested_by="test", engine="claude", client=stub)
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="anthropic", client=stub)
         assert run.status == "awaiting_approval"
         assert "workflow" in run.engine and "declined" in run.engine
 
 
-def test_claude_api_errors_fall_back(parked: World):
+def test_model_api_errors_fall_back(parked: World):
     import anthropic
     import httpx2
 
@@ -316,7 +317,7 @@ def test_claude_api_errors_fall_back(parked: World):
             raise anthropic.APIConnectionError(request=httpx2.Request("POST", "https://api.anthropic.com/v1/messages"))
 
     with session_scope() as s:
-        run = agent_service.run_agent(s, "helix", requested_by="test", engine="claude", client=Down())
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="anthropic", client=Down())
         assert run.status == "awaiting_approval" and "network error" in run.engine
 
 
@@ -331,9 +332,95 @@ def test_prompt_injection_in_payloads_cannot_reach_production(parked: World):
     ])
     with session_scope() as s:
         live_before = {(r.oem, r.version, r.state) for r in registry.live_rows(s)}
-        run = agent_service.run_agent(s, "helix", requested_by="test", engine="claude", client=stub)
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="anthropic", client=stub)
         assert run.status == "failed" and run.mapping_version_id is None
         steps = s.execute(select(AgentStep).where(AgentStep.run_id == run.id).order_by(AgentStep.seq)).scalars().all()
         assert [(st.tool, st.ok) for st in steps] == [("sample_dead_letters", True), ("approve_mapping", False),
                                                       ("promote", False)]
         assert {(r.oem, r.version, r.state) for r in registry.live_rows(s)} == live_before
+
+
+# ------------------------------------------------------- the same engine on Gemini
+class StubGemini:
+    """Stands in for google.genai.Client(). Replays a scripted conversation and checks
+    the request shape the real API requires, which differs from the other provider's."""
+
+    def __init__(self, script):
+        self.script = list(script)
+        self.calls: list[dict[str, Any]] = []
+        self.models = SimpleNamespace(generate_content=self.generate_content)
+
+    def generate_content(self, *, model, contents, config):
+        assert model and config.max_output_tokens > 0
+        assert config.system_instruction and "Rosetta" in config.system_instruction
+        # our loop drives the tools, so the SDK must never call anything itself
+        assert config.automatic_function_calling.disable is True
+        decls = config.tools[0].function_declarations
+        assert {d.name for d in decls} >= {"sample_dead_letters", "suggest_mapping", "submit_draft"}
+        # the two Anthropic-only keywords must not reach Gemini's schema
+        blob = json.dumps([d.parameters.model_dump() if hasattr(d.parameters, "model_dump")
+                           else d.parameters for d in decls if d.parameters], default=str)
+        assert "additionalProperties" not in blob and '"strict"' not in blob
+        assert contents[0].role == "user"
+        self.calls.append({"n": len(contents), "last": contents[-1]})
+        step = self.script.pop(0)
+        return step(contents) if callable(step) else step
+
+
+def gcall(name, args):
+    return SimpleNamespace(name=name, args=args)
+
+
+def greply(*calls, text=None):
+    parts = [SimpleNamespace(function_call=c, text=None) for c in calls]
+    content = SimpleNamespace(role="model", parts=parts)
+    cand = SimpleNamespace(content=content, finish_reason="STOP")
+    return SimpleNamespace(candidates=[cand], function_calls=list(calls), text=text,
+                           usage_metadata=SimpleNamespace(prompt_token_count=900,
+                                                          candidates_token_count=200))
+
+
+def test_the_same_engine_runs_on_gemini(parked: World):
+    """One toolbox, one result shape: the service cannot tell which provider ran."""
+    def submit_from_suggestion(contents):
+        # tool results come back as a dict, not a JSON string, so read it straight
+        sug = contents[-1].parts[-1].function_response.response["result"]
+        fields = [{"canonical": f["canonical"], "path": f["path"], "encoding": f["encoding"],
+                   "confidence": f["confidence"], "rationale": "classifier and physics agree"}
+                  for f in sug["fields"]]
+        return greply(gcall("submit_draft", {"fields": fields, "event_codes": [],
+                                             "summary": "all fields mapped"}))
+
+    stub = StubGemini([
+        greply(gcall("sample_dead_letters", {"limit": 900}), gcall("profile_fields", {})),
+        greply(gcall("learn_event_codes", {"path": "ereignis"}), gcall("suggest_mapping", {})),
+        submit_from_suggestion,
+        greply(text="Mapped the fields. Check the event codes first."),
+    ])
+    with session_scope() as s:
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="google", client=stub)
+        assert run.status == "awaiting_approval", run.summary
+        assert run.engine.startswith("model") and "gemini" in run.engine
+        assert run.tokens_in == 3600 and run.tokens_out == 800
+        tools = [st.tool for st in s.execute(select(AgentStep).where(AgentStep.run_id == run.id)
+                                             .order_by(AgentStep.seq)).scalars()]
+        assert tools == ["sample_dead_letters", "profile_fields", "learn_event_codes",
+                         "suggest_mapping", "submit_draft"]
+        # history was only ever appended to: model turn, then one turn holding every result
+        assert [c["n"] for c in stub.calls] == [1, 3, 5, 7]
+
+
+def test_a_gemini_api_error_falls_back_to_the_workflow(parked: World):
+    from google.genai import errors
+
+    class Down:
+        def __init__(self):
+            self.models = SimpleNamespace(generate_content=self.boom)
+
+        def boom(self, **kw):
+            raise errors.ClientError(429, {"error": {"message": "quota"}})
+
+    with session_scope() as s:
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="google", client=Down())
+        assert run.status == "awaiting_approval", run.summary     # the workflow finished the job
+        assert "rate limited" in run.engine and "workflow" in run.engine

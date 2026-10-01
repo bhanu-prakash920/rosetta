@@ -19,7 +19,7 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 class RunBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     oem: str = Field(max_length=32, pattern=r"^[a-z0-9_]+$")
-    engine: str = Field("auto", pattern="^(auto|workflow|claude)$")
+    engine: str = Field("auto", pattern="^(auto|workflow|model|anthropic|google)$")
     label: str | None = Field(None, max_length=64)
 
 
@@ -87,4 +87,5 @@ def model(_: Principal = Depends(require(*STAFF))):
         return {"loaded": False, "error": type(e).__name__}
     return {"loaded": True, "meta": meta, "labels": len(m.classes),
             "engine": agent_service.choose_engine("auto"),
+            "llm": agent_service.llm_model_name(),
             "evaluation": json.loads(rep.read_text()) if rep.exists() else None}

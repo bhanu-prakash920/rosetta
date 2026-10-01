@@ -1,6 +1,6 @@
 """The agent's tools, and the guardrails around them.
 
-Both engines (the deterministic workflow and the Claude tool-use loop) work
+Both engines (the deterministic workflow and the model-driven tool-use loop) work
 through this one class, so they have exactly the same powers:
 
   read      sample dead letters, profile fields, search the mapping memory,

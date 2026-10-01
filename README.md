@@ -34,7 +34,7 @@ Every number links to the file it comes from.
 | Processes killed with SIGKILL under load | recover | 4 killed, all restarted, 0 lost, 0 stored twice; 16,918 events redelivered after the kills, every one absorbed | [chaos.json](docs/evidence/chaos.json) |
 | Field mapping on formats with unseen names | beat a baseline | 99.1% field and unit correct, against 35.8% for name matching; whole format right 96.9% against 0% | [ml_field_mapper.json](docs/evidence/ml_field_mapper.json) |
 | Slowest queries | faster | 38x to 8,000x, EXPLAIN ANALYZE before and after on PostgreSQL 16 | [sql_explain.md](docs/evidence/sql_explain.md) |
-| Tests | 80% coverage | 2,755 tests pass without Docker, 93.7% line coverage; 13 more against real Kafka, PostgreSQL, TimescaleDB, pgvector and Redis; 21 behaviour scenarios | [coverage.json](docs/evidence/coverage.json) |
+| Tests | 80% coverage | 2,761 tests pass without Docker, 93.4% line coverage; 13 more against real Kafka, PostgreSQL, TimescaleDB, pgvector and Redis; 21 behaviour scenarios | [coverage.json](docs/evidence/coverage.json) |
 | Contracts between services | Pact | web console to API (8 interactions), normaliser to processor and to the dead-letter worker, processor to alert subscribers (10 messages); every provider verified | [tests/contract/pacts](tests/contract/pacts) |
 | Production stack in Docker Compose | one command, works | from empty volumes to 20 healthy services in 108 s; Kafka, TimescaleDB, pgvector, Redis, MinIO, EMQX, Prometheus, Loki, Tempo, Grafana | [compose_stack.json](docs/evidence/compose_stack.json) |
 | MQTT gateway restarted and SIGKILLed under load | no loss | 615,464 sent, 615,464 received, 0 dropped by the broker | [compose_mqtt_restart.json](docs/evidence/compose_mqtt_restart.json) |
@@ -74,6 +74,27 @@ is `rosetta-demo-2026` unless `ROSETTA_DEMO_PASSWORD` says otherwise.
 4. **Try on parked traffic, then Approve**: the draft is replayed against the real parked messages without writing anything; approval releases it and replays the parked messages.
 5. **Live** again: Helix is translated, the dead-letter count falls, the workers never restarted. Then try "Firmware update": 35% of one maker's fleet switches format, and both versions run side by side.
 
+### Letting a model drive the agent (optional)
+
+Step 3 works with no API key: the tools run in a fixed, deterministic order. Give it a
+key and a language model chooses the order and explains itself instead. Put the key for
+whichever provider you have in `.env`, which `make run` reads:
+
+```bash
+cp .env.example .env     # if you have no .env yet
+# then set one of these in it:
+GEMINI_API_KEY=...       # Google
+ANTHROPIC_API_KEY=...    # Anthropic
+```
+
+`ROSETTA_LLM_PROVIDER` (`auto`, `google`, `anthropic`, `none`) picks one when several
+keys are set; `ROSETTA_LLM_MODEL` overrides that provider's default model. The Mapping
+studio names the model it is using, and its **Model** button forces that engine for one
+run. Whatever the model proposes still has to pass the golden set and a person.
+
+A local run takes only the model settings from `.env`; the rest of that file configures
+the Compose stack.
+
 ### Production mode
 
 ```bash
@@ -102,7 +123,7 @@ flowchart LR
 - **Hot reload, canary, replay.** A registry epoch tells workers to swap tables between two batches; versions can be live for a share of vehicles; approving a version replays what was parked. [ADR 0004](docs/adr/0004-hot-reload-canary-and-replay.md)
 - **At-least-once with idempotent consumers.** A replay window per vehicle, a Bloom filter for late events, last-write-wins state, offsets stored inside each Parquet file. [ADR 0003](docs/adr/0003-at-least-once-with-idempotent-consumers.md)
 - **One store per kind of data.** PostgreSQL for the 3NF core and the registry (CP), Redis for latest state (AP), Parquet for history, Kafka for streams, pgvector for mapping memory. [ADR 0002](docs/adr/0002-polyglot-storage.md)
-- **The agent proposes, people decide.** Seven tools, a hold-out golden set, no power over what is live, every call audited. A deterministic engine always, Claude when a key is set. [ADR 0005](docs/adr/0005-agent-guardrails.md)
+- **The agent proposes, people decide.** Seven tools, a hold-out golden set, no power over what is live, every call audited. A deterministic engine always, a language model when a key is set (Anthropic or Google). [ADR 0005](docs/adr/0005-agent-guardrails.md)
 
 More: [architecture](docs/architecture.md), [data model and capacity](docs/data-model.md),
 [algorithms with measured runtimes](docs/algorithms.md), [threat model](docs/security/threat-model.md),
@@ -136,7 +157,7 @@ The ones that switch between local and production adapters:
 | `ROSETTA_ARCHIVE` | `fs` | `s3` with `ROSETTA_S3_*` (static keys optional: the default credential chain is used without them) |
 | `ROSETTA_TELEMETRY_STORE` | `parquet` | `timescale` to also write the hypertable |
 | `ROSETTA_JWT_SECRET` | generated per process | required, 32 characters or more; or `ROSETTA_OIDC_JWKS_URL` for an identity provider |
-| `ANTHROPIC_API_KEY` | unset: deterministic agent | set: the agent is driven by Claude (`ROSETTA_LLM_MODEL`, default `claude-opus-5-5`) |
+| `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` | unset: deterministic agent | set: a model drives the tools. `ROSETTA_LLM_PROVIDER` (`auto`, `google`, `anthropic`, `none`) picks one when several keys exist; `ROSETTA_LLM_MODEL` overrides the provider's default |
 
 ## Generated files
 
@@ -154,7 +175,7 @@ tracked; each is produced from the code here:
 
 ## Known issues
 
-- The Claude-driven agent is tested against a stub of the API client, not against the live API: no key was available while the evidence was produced.
+- The model-driven agent is tested against a stub client for each provider, not against a live API: no key was available while the evidence was produced.
 - The Compose stack was run end to end. The Helm chart and Terraform were checked with the real tools (lint, schema validation, `terraform validate`) but not installed on a cluster or applied to an AWS account. See [infra/VERIFICATION.md](infra/VERIFICATION.md).
 - Binary formats need the OEM's schema. The agent reuses a Protobuf descriptor already registered for the source; without one it says so, records the refusal, and asks for the descriptor.
 - The model is trained and evaluated on synthetic formats from one simulator. Expect lower accuracy on real feeds, which is why every proposal must pass the golden set and a person.
@@ -166,5 +187,6 @@ Open-source components are listed in `pyproject.toml` and `web/package.json`
 (`make sbom` writes the installed versions). One photograph in the console is from
 Wikimedia Commons under CC BY 2.0; two images were generated with Google Gemini and
 the other graphics were drawn for this project. Sources and licences are in [docs/CREDITS.md](docs/CREDITS.md). AI tools used: Claude (Anthropic) as a coding
-assistant for implementation, tests and documentation; the Claude API is an
-optional runtime component of the agent. All data is synthetic.
+assistant for implementation, tests and documentation. A language model is an
+optional runtime component of the mapping agent, which speaks to Anthropic or
+Google depending on the key provided. All data is synthetic.
