@@ -28,6 +28,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 from content import build_sections  # noqa: E402
 
 W_CONTENT = 9306          # page width minus margins, in twentieths of a point
+
+# The template tells participants what to write in each section. Those prompts are
+# dropped: this document answers them. Bulleted prompts are all List Paragraph;
+# these three are body text. "Video Link:" is a field to fill, not a prompt, so it stays.
+GUIDANCE_PREFIXES = ("Brief overview", "Every feature must be traceable to code", "Videos longer than 5:00")
+KEEP_FIELDS = ("Video Link:",)
 EMU_PER_INCH = 914400
 
 
@@ -178,6 +184,7 @@ def main() -> None:
     current = None
     replaced_tables: set[str] = set()
     used = set()
+    dropped: list[str] = []
     for b in blocks:
         t = text_of(b)
         style = re.search(r'<w:pStyle w:val="([^"]+)"', b)
@@ -185,6 +192,10 @@ def main() -> None:
         if style in ("Heading1", "Heading2"):
             current = t.replace("&amp;", "&").strip()
             out.append(b)
+            continue
+        if current is not None and not t.strip().startswith(KEEP_FIELDS) \
+                and (style == "ListParagraph" or t.strip().startswith(GUIDANCE_PREFIXES)):
+            dropped.append(t.strip())
             continue
         # cover page fields
         for label, value in sections["cover"].items():
@@ -256,7 +267,7 @@ def main() -> None:
             if p.is_file():
                 z.write(p, p.relative_to(work).as_posix())
     shutil.rmtree(work, ignore_errors=True)
-    print(f"wrote {OUT.relative_to(ROOT)} with {len(d.media)} images")
+    print(f"wrote {OUT.relative_to(ROOT)} with {len(d.media)} images, {len(dropped)} template prompts dropped")
 
 
 if __name__ == "__main__":

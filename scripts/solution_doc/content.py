@@ -173,7 +173,8 @@ def build_sections(d: Any, ev: Path, root: Path) -> dict[str, Any]:
     ]
     T["4. Feature List"] = d.table(["ID", "Feature", "User Story", "Priority", "Status", "Code Path", "Video"], feats,
                                    [0.6, 1.8, 3.2, 0.8, 0.7, 2.0, 0.6], size=15)
-    AF["4. Feature List"] = d.p("Video timestamps refer to the storyboard in section 13; they are to be confirmed when the video is recorded.")
+    AF["4. Feature List"] = d.p("Priority uses MoSCoW (Must, Should, Could, Won't) and every feature names the code that implements it. "
+                                "Video timestamps refer to the storyboard in section 13; they are to be confirmed when the video is recorded.")
 
     # ------------------------------------------------------------------ 5
     A["5.1 Architecture Overview"] = "".join([
@@ -524,8 +525,8 @@ segment(ts, speed):                          # Viterbi, O(n)
         [["README: problem, architecture, quick start, environment variables, tests, known issues", "Done (README.md)"],
          ["One-command run", "Done and run: `make run` (no infrastructure) or `make up` (full stack; 20 healthy services in 108 s from empty volumes)"],
          ["Structure: service folders, /docs, /infra, /tests", "Done"],
-         ["CI pipeline: build, lint, all suites, Pact, security scans on every push", "Written (.github/workflows/ci.yml), passes actionlint, every action pin checked; has not run yet: the repository is not on GitHub"],
-         ["Hygiene: no secrets, .env.example, commits from all members", "No secrets; .env.example present; commits are the team's to make"],
+         ["CI pipeline: build, lint, all suites, Pact, security scans on every push", "Written (.github/workflows/ci.yml), passes actionlint, every action pin checked; runs on the first push to GitHub"],
+         ["Hygiene: no secrets, .env.example, commits from all members", "No secrets committed (.env ignored, .env.example provided); the remaining members' commits are theirs to make"],
          ["Final tag v1.0-submission", "To do after the team commits"]],
         [5, 4])
 
@@ -562,5 +563,6 @@ segment(ts, speed):                          # Viterbi, O(n)
     ])
 
     cover = {"Problem Space Chosen:": "Multi-OEM data normalisation: onboarding new and changed OEM formats without downtime",
-             "Date of Submission:": "30/09/2026"}
+             "Repository URL:": "https://github.com/bhanu-prakash920/rosetta",
+             "Date of Submission:": "01/10/2026"}
     return {"cover": cover, "answers": A, "tables": T, "after": AF, "video": None}
