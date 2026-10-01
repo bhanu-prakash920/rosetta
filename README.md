@@ -34,7 +34,7 @@ Every number links to the file it comes from.
 | Processes killed with SIGKILL under load | recover | 4 killed, all restarted, 0 lost, 0 stored twice; 16,918 events redelivered after the kills, every one absorbed | [chaos.json](docs/evidence/chaos.json) |
 | Field mapping on formats with unseen names | beat a baseline | 99.1% field and unit correct, against 35.8% for name matching; whole format right 96.9% against 0% | [ml_field_mapper.json](docs/evidence/ml_field_mapper.json) |
 | Slowest queries | faster | 38x to 8,000x, EXPLAIN ANALYZE before and after on PostgreSQL 16 | [sql_explain.md](docs/evidence/sql_explain.md) |
-| Tests | 80% coverage | 2,761 tests pass without Docker, 93.4% line coverage; 13 more against real Kafka, PostgreSQL, TimescaleDB, pgvector and Redis; 21 behaviour scenarios | [coverage.json](docs/evidence/coverage.json) |
+| Tests | 80% coverage | 2,764 tests pass without Docker, 93.4% line coverage; 13 more against real Kafka, PostgreSQL, TimescaleDB, pgvector and Redis; 21 behaviour scenarios | [coverage.json](docs/evidence/coverage.json) |
 | Contracts between services | Pact | web console to API (8 interactions), normaliser to processor and to the dead-letter worker, processor to alert subscribers (10 messages); every provider verified | [tests/contract/pacts](tests/contract/pacts) |
 | Production stack in Docker Compose | one command, works | from empty volumes to 20 healthy services in 108 s; Kafka, TimescaleDB, pgvector, Redis, MinIO, EMQX, Prometheus, Loki, Tempo, Grafana | [compose_stack.json](docs/evidence/compose_stack.json) |
 | MQTT gateway restarted and SIGKILLed under load | no loss | 615,464 sent, 615,464 received, 0 dropped by the broker | [compose_mqtt_restart.json](docs/evidence/compose_mqtt_restart.json) |
@@ -175,7 +175,7 @@ tracked; each is produced from the code here:
 
 ## Known issues
 
-- The model-driven agent is tested against a stub client for each provider, not against a live API: no key was available while the evidence was produced.
+- The model-driven agent runs against both providers' stub clients, and Google has been run once live (`gemini-3.5-flash`, the Helix case: seven tool calls, 115 of 115 golden cases, a draft submitted). Anthropic has not been run live: no key for it was available. On a free-tier key the per-minute request limit is easy to hit, and the agent then falls back to the deterministic workflow with the reason recorded.
 - The Compose stack was run end to end. The Helm chart and Terraform were checked with the real tools (lint, schema validation, `terraform validate`) but not installed on a cluster or applied to an AWS account. See [infra/VERIFICATION.md](infra/VERIFICATION.md).
 - Binary formats need the OEM's schema. The agent reuses a Protobuf descriptor already registered for the source; without one it says so, records the refusal, and asks for the descriptor.
 - The model is trained and evaluated on synthetic formats from one simulator. Expect lower accuracy on real feeds, which is why every proposal must pass the golden set and a person.

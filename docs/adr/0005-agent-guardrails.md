@@ -45,5 +45,11 @@ produces plausible numbers that are 38 percent too low.
 
 - The agent is useful without a model, and better with one where statistics run out.
 - The model-driven loop is tested against a stub client per provider, each checking
-  that provider's request shape. Neither has been run against a live API in this
-  repository's evidence.
+  that provider's request shape. Google has also been run once against the live API
+  (`gemini-3.5-flash`, the Helix case): it called seven tools in its own order,
+  reached 115 of 115 golden cases and submitted a draft, on 46,759 input tokens.
+  Anthropic has not been run live, because no key for it was available.
+- A key on a free tier allows few requests a minute, and this loop makes several in a
+  row, so the first limit hit is waited out once when the server asks for a delay it is
+  worth waiting (`MAX_RETRY_WAIT_S`). A longer delay hands over to the workflow instead,
+  because a person is watching the studio fill in.

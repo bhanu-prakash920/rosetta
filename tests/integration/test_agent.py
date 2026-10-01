@@ -424,3 +424,81 @@ def test_a_gemini_api_error_falls_back_to_the_workflow(parked: World):
         run = agent_service.run_agent(s, "helix", requested_by="test", engine="google", client=Down())
         assert run.status == "awaiting_approval", run.summary     # the workflow finished the job
         assert "rate limited" in run.engine and "workflow" in run.engine
+
+
+def _quota_error(delay: str | None):
+    from google.genai import errors
+
+    details = [{"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": delay}] if delay else []
+    return errors.ClientError(429, {"error": {"code": 429, "message": "quota", "details": details}})
+
+
+def _record_sleeps(monkeypatch) -> list[float]:
+    """Collect every sleep. The pipeline sleeps for its own reasons, so the assertions
+    below look for the retry's own wait rather than for silence."""
+    import time as _t
+
+    slept: list[float] = []
+    real = _t.sleep
+    monkeypatch.setattr(_t, "sleep", lambda s: (slept.append(s), real(0))[1])
+    return slept
+
+
+def test_one_rate_limit_is_waited_out_rather_than_given_up_on(parked: World, monkeypatch):
+    """A free-tier key allows few requests a minute and this loop makes several."""
+    slept = _record_sleeps(monkeypatch)
+
+    class LimitedOnce:
+        def __init__(self):
+            self.n = 0
+            self.models = SimpleNamespace(generate_content=self.go)
+
+        def go(self, **kw):
+            self.n += 1
+            if self.n == 1:
+                raise _quota_error("3s")
+            return greply(text="nothing to do here")
+
+    with session_scope() as s:
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="google",
+                                      client=LimitedOnce())
+        assert 3.0 in slept                         # waited exactly what the server asked
+        assert run.status == "awaiting_approval"    # and then carried on
+
+
+def test_a_long_rate_limit_wait_hands_over_to_the_workflow(parked: World, monkeypatch):
+    """Nobody watching the studio should sit through a minute of nothing."""
+    slept = _record_sleeps(monkeypatch)
+
+    class LimitedLong:
+        def __init__(self):
+            self.models = SimpleNamespace(generate_content=self.go)
+
+        def go(self, **kw):
+            raise _quota_error("47s")
+
+    with session_scope() as s:
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="google",
+                                      client=LimitedLong())
+        assert not [x for x in slept if x > 12.0]           # never waited the long one out
+        assert run.status == "awaiting_approval"            # the workflow finished the job
+        assert "rate limited, retry in 47s" in run.engine   # and the record says why
+
+
+def test_a_rate_limit_with_no_advice_is_not_waited_out(parked: World, monkeypatch):
+    """With no RetryInfo there is nothing to wait for, so do not guess."""
+    slept = _record_sleeps(monkeypatch)
+
+    class NoAdvice:
+        def __init__(self):
+            self.n = 0
+            self.models = SimpleNamespace(generate_content=self.go)
+
+        def go(self, **kw):
+            self.n += 1
+            raise _quota_error(None)
+
+    with session_scope() as s:
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="google", client=NoAdvice())
+        assert "rate limited" in run.engine and "retry in" not in run.engine
+        assert not [x for x in slept if x >= 1.0]

@@ -4,6 +4,14 @@ Record at 1080p. Start `make run` a minute before recording so the charts have
 history. Sign in as `engineer@rosetta.example`. Keep a second browser window
 signed in as `analyst@rosetta.example` for the masking shot.
 
+The agent engine: with no API key in `.env` the studio runs the deterministic
+workflow, which is fast and always finishes. With a key it says so and a model
+drives the tools instead, choosing its own order and explaining itself. Decide
+which you are showing before you record. A free-tier key allows few requests a
+minute, so the model may be rate limited mid-run and hand back to the workflow;
+that is worth saying out loud if it happens, because it is the fallback working,
+but it is not what you want to discover live. Run it once beforehand either way.
+
 | Time | Screen | Say (short, plain) |
 |---|---|---|
 | 0:00 | Landing page, "the same moment, written six ways" | "One vehicle brakes hard at 64 km/h. Six car makers describe that moment in six different formats and units. Every new maker, and every firmware update that renames a field, normally means new code, a release, and messages lost while it ships." |

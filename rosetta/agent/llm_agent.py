@@ -23,14 +23,16 @@ Guardrails, whichever provider runs:
     back to the deterministic workflow.
 
 Status: exercised in tests against stub clients for both providers
-(tests/integration/test_agent.py). Neither has been run against a live API in
-this repository's evidence, because no API credentials were available when the
-evidence was produced.
+(tests/integration/test_agent.py). Google has also been run once against the
+live API, on the Helix case with `gemini-3.5-flash`: seven tool calls, 115 of
+115 golden cases, a draft submitted for review, 46,759 tokens in and 2,174 out.
+Anthropic has not, because no key for it was available.
 """
 from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 from ..config import get_settings
@@ -40,9 +42,15 @@ from .toolbox import Toolbox
 
 MAX_TURNS = 16
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
+# The longest a rate-limit wait may be before the run gives up and the workflow takes
+# over. Someone is watching the studio fill in, so a long stall is worse than a
+# deterministic answer.
+MAX_RETRY_WAIT_S = 12.0
 
 # The default model per provider. ROSETTA_LLM_MODEL overrides whichever is chosen.
-DEFAULT_MODEL = {"anthropic": "claude-opus-5-5", "google": "gemini-2.5-pro"}
+# Google's default is a flash model on purpose: the pro models need a paid tier, and a
+# key without one is refused with 429 rather than falling back to anything.
+DEFAULT_MODEL = {"anthropic": "claude-opus-5-5", "google": "gemini-3.5-flash"}
 # The environment variable each provider's SDK reads for its credentials.
 PROVIDER_KEYS = {"anthropic": ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"),
                  "google": ("GEMINI_API_KEY", "GOOGLE_API_KEY")}
@@ -312,6 +320,7 @@ def _run_google(tb: Toolbox, client: Any, max_turns: int) -> dict[str, Any]:
     )
     tokens_in = tokens_out = 0
     final_text = ""
+    waited = False
     for _turn in range(max_turns):
         try:
             resp = client.models.generate_content(model=model, contents=contents, config=config)
@@ -322,7 +331,17 @@ def _run_google(tb: Toolbox, client: Any, max_turns: int) -> dict[str, Any]:
             if status == 404:
                 return _unavailable(tb, f"model {model!r} not found", tokens_in, tokens_out)
             if status == 429:
-                return _unavailable(tb, "rate limited", tokens_in, tokens_out)
+                # A free-tier key allows very few requests a minute, and this loop makes
+                # several in a row, so the first limit hit is usually worth waiting out.
+                # Only once, and only for a wait the server itself asks for and that a
+                # person watching would sit through.
+                wait = _retry_after(e)
+                if wait is not None and wait <= MAX_RETRY_WAIT_S and not waited:
+                    waited = True
+                    time.sleep(wait)
+                    continue
+                hint = f", retry in {wait:.0f}s" if wait is not None else ""
+                return _unavailable(tb, f"rate limited{hint}", tokens_in, tokens_out)
             return _unavailable(tb, f"API error {status}", tokens_in, tokens_out)
         except errors.ServerError as e:
             return _unavailable(tb, f"API error {getattr(e, 'code', None) or 'server'}", tokens_in, tokens_out)
@@ -372,3 +391,25 @@ def _trimmed(out: dict[str, Any], limit: int = 60_000) -> dict[str, Any]:
     if len(blob) <= limit:
         return {"result": out}
     return {"result": {"truncated": blob[:limit]}}
+
+
+def _retry_after(err: Any) -> float | None:
+    """Seconds the server asks us to wait, from its RetryInfo. None when it did not say.
+
+    The SDK keeps the whole response body on `details`, with the status's own details
+    nested inside it.
+    """
+    body = getattr(err, "details", None)
+    if not isinstance(body, dict):
+        return None
+    items = (body.get("error") or {}).get("details")
+    if not isinstance(items, list):
+        return None
+    for item in items:
+        delay = item.get("retryDelay") if isinstance(item, dict) else None
+        if isinstance(delay, str) and delay.endswith("s"):
+            try:
+                return float(delay[:-1])
+            except ValueError:
+                return None
+    return None

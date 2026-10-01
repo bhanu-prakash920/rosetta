@@ -52,7 +52,7 @@ def build_sections(d: Any, ev: Path, root: Path) -> dict[str, Any]:
             f"target; {n(st_a['simulator_sent'])} events and {st_a['unaccounted']} unaccounted. Four worker processes killed with "
             f"SIGKILL under load: all recovered, nothing lost, nothing stored twice. The field-mapping model is "
             f"{ms['exact_label_accuracy']:.1%} correct on formats whose names it never saw, against {bs['exact_label_accuracy']:.1%} "
-            f"for a name-matching baseline. {cov['meta'] and ''}{n(2761)} automated tests, {cov_pct:.0f}% line coverage. The production stack runs from one command in Docker Compose, and a restart or SIGKILL of the MQTT gateway under load loses nothing."),
+            f"for a name-matching baseline. {cov['meta'] and ''}{n(2764)} automated tests, {cov_pct:.0f}% line coverage. The production stack runs from one command in Docker Compose, and a restart or SIGKILL of the MQTT gateway under load loses nothing."),
         d.p("**What is new.** Mappings are data from a whitelist, compiled to specialised code at run time, so an agent can propose "
             "one without being able to run arbitrary code. The agent identifies units from physics: a field always 0.278 times the "
             "GPS-derived speed is metres per second, whatever it is called. And onboarding is zero downtime by construction: park, "
@@ -427,7 +427,7 @@ segment(ts, speed):                          # Viterbi, O(n)
          ["Compliance & Chaos", "erasure and audit-chain tests; SIGKILL chaos script; gateway restart and SIGKILL in Compose", "6 checks + 1", "all pass: 0 lost, 0 duplicated; 615,464 of 615,464 over MQTT", "Yes"]],
         [1.8, 3.2, 1.4, 1.8, 0.8], size=15)
     AF["9. Test Strategy"] = "".join([
-        d.p(f"**Coverage:** {cov_pct:.1f}% of lines over every suite that needs no Docker (2,761 tests)."),
+        d.p(f"**Coverage:** {cov_pct:.1f}% of lines over every suite that needs no Docker (2,764 tests)."),
         d.p("**Edge cases covered:** duplicates up to 30%, out-of-order delivery, events older than the dedup window, truncated and empty "
             "payloads, corrupted VIN check digits, oversize payloads, unknown sources, format drift for part of a fleet, a worker killed "
             "between batches, after producing but before committing, and after writing a file but before committing; a replay run twice; "
@@ -484,7 +484,7 @@ segment(ts, speed):                          # Viterbi, O(n)
             "including a hold-out half; a person approves; canary with automatic rollback. Failures: refusal or API error falls back to the "
             "deterministic engine with the reason on the run record; a step limit (40) and turn limit (16) bound cost. Cost: the deterministic "
             "engine runs in under 1 s locally at no API cost. The model-driven engine sends a few thousand tokens per turn for 4 to 8 turns, a few "
-            "cents per onboarding at list prices; it was tested against a stub client, not the live API (no key was available)."),
+            "cents per onboarding at list prices. Google was also run once against the live API (`gemini-3.5-flash`, the Helix case: seven tool calls, 115 of 115 golden cases, 46,759 input tokens); Anthropic was tested against a stub client only, no key being available."),
         d.p("**Limit.** All formats come from one simulator; real OEM feeds are messier. Expect lower accuracy, which the golden set and "
             "the human gate are there to catch."),
     ])
@@ -499,7 +499,7 @@ segment(ts, speed):                          # Viterbi, O(n)
                  ["0005", "The agent proposes, people decide; one toolbox for two engines", "Useful without a model; the model adds judgement, never power"]],
                 [0.6, 4.4, 4]),
         d.p("**Risks and technical debt.** Everything was measured on one laptop with the local adapters, not on a cluster. The model-driven "
-            "engine is untested against the live API. The Compose stack was run end to end; the Helm chart and Terraform were validated with "
+            "engine has had one live run, on one source and one provider, so its behaviour across providers and formats is barely sampled. The Compose stack was run end to end; the Helm chart and Terraform were validated with "
             "their tools but not installed or applied. The model's accuracy "
             "is on synthetic formats. Python caps per-core throughput (about 25,000 events per second per normaliser); a compiled normaliser "
             "would cut the core count several-fold. The web console is a demonstration of the API, not a hardened product (for example, it "
