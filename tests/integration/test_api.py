@@ -208,6 +208,23 @@ def test_ending_one_scenario_does_not_end_another(api, engineer):
     assert "enabled" not in applied             # the new maker keeps sending
 
 
+def test_every_scenario_the_console_offers_can_be_undone():
+    """The console pairs each scenario with a reverse, and disables the card when there
+    is none. Each reverse must undo its own scenario and leave the others alone."""
+    from rosetta.api.routers.ops import SCENARIOS
+
+    def settings(name: str) -> set[str]:
+        # _enable and _disable are two ways of writing the same setting, the source list
+        return {"enabled" if k in ("_enable", "_disable") else k for k in SCENARIOS[name]}
+
+    pairs = [("launch_helix", "stop_helix"), ("ota_drift", "ota_reset"),
+             ("outage", "recover"), ("shift_start", "calm"), ("pause", "resume")]
+    for on, off in pairs:
+        assert on in SCENARIOS and off in SCENARIOS, f"{on}/{off} missing"
+        assert settings(off) == settings(on), f"{off} does not undo exactly what {on} did"
+        assert SCENARIOS[off] != SCENARIOS[on], f"{off} does not change anything back"
+
+
 def test_ingest_over_http(api, admin, analyst):
     body = b'{"VIN":"5PAEV1A2XTA000035","ts":1790000102.12,"msg_no":424242,"lat":13.0,"lng":80.2,"hdg":1,' \
            b'"speed_mph":10,"odometer_mi":100,"oat_f":80,"ign":"ON","dtcs":""}\n'
