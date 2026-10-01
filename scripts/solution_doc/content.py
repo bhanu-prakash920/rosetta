@@ -525,7 +525,7 @@ segment(ts, speed):                          # Viterbi, O(n)
         [["README: problem, architecture, quick start, environment variables, tests, known issues", "Done (README.md)"],
          ["One-command run", "Done and run: `make run` (no infrastructure) or `make up` (full stack; 20 healthy services in 108 s from empty volumes)"],
          ["Structure: service folders, /docs, /infra, /tests", "Done"],
-         ["CI pipeline: build, lint, all suites, Pact, security scans on every push", "Written (.github/workflows/ci.yml), passes actionlint, every action pin checked; runs on the first push to GitHub"],
+         ["CI pipeline: build, lint, all suites, Pact, security scans on every push", "Written (.github/workflows/ci.yml), passes actionlint, every action pin checked; every job green on GitHub Actions"],
          ["Hygiene: no secrets, .env.example, commits from all members", "No secrets committed (.env ignored, .env.example provided); the remaining members' commits are theirs to make"],
          ["Final tag v1.0-submission", "To do after the team commits"]],
         [5, 4])

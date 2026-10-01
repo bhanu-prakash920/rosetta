@@ -31,6 +31,7 @@ Date of the checks: 2026-09-30. Machine: Apple M4, 10 cores, Docker Desktop
 | R12 | production adapters against real servers | `make test-infra` (Testcontainers: PostgreSQL 16, pgvector, TimescaleDB, Redis 7, Kafka 3.9) | 13 passed. The TimescaleDB test is new and runs `postgres_extras.sql` twice |
 | R13 | security scans | bandit, Semgrep, pip-audit, npm audit, Trivy (file system and image), OWASP ZAP baseline and API scan | reports and triage in `docs/evidence/security/README.md` |
 | R14 | contracts between services | Pact: web console -> API (pact-js), normaliser -> processor, normaliser -> dead-letter worker, processor -> alert subscribers (pact-python), providers verified | `make pact`, pact files in `tests/contract/pacts/` |
+| R15 | the CI workflow on GitHub | pushed to GitHub Actions and the run read back (`gh run view`) | every job green on ubuntu-24.04: lint, unit, coverage gate, integration and Pact, BDD, chaos, front end, security, infrastructure, image, ZAP. The load test is manual and stays skipped. Run 36885803294 |
 
 Bugs found by running it, all fixed:
 
@@ -91,7 +92,6 @@ Results of the Makefile targets that were run:
 | the chart installs on a cluster, hooks run in order, pods become ready | no Kubernetes cluster | `helm upgrade --install` on kind or a test cluster |
 | the rendered manifests against a live API server, and NetworkPolicy enforcement | no cluster | `kubectl apply --dry-run=server`; a CNI that enforces policies |
 | `terraform plan` and `apply` | no AWS account | `terraform plan` in a sandbox account |
-| the CI workflow on GitHub | the repository does not exist yet | push, then read the run |
 | the mTLS overlay with real device certificates | not started in this pass | `make certs && make up-mtls`, then publish with a device certificate to its own topic (accepted) and another device's (refused) |
 | alert rules fire when they should | no rule unit tests | `promtool test rules` with test files |
 | Kafka and MSK with TLS or SASL | local Kafka is plain text | `ROSETTA_KAFKA_CFG_SECURITY_PROTOCOL=SASL_SSL` against MSK |

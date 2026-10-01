@@ -40,6 +40,7 @@ Every number links to the file it comes from.
 | MQTT gateway restarted and SIGKILLed under load | no loss | 615,464 sent, 615,464 received, 0 dropped by the broker | [compose_mqtt_restart.json](docs/evidence/compose_mqtt_restart.json) |
 | Security scans | no open high or critical | bandit, Semgrep, pip-audit, npm audit, Trivy (file system and image), OWASP ZAP baseline and API scan: every gate passes after fixes | [security/README.md](docs/evidence/security/README.md) |
 | Helm, Terraform, CI workflow | valid | helm lint; kubeconform against Kubernetes 1.33 (20 of 20 valid); terraform validate; actionlint; every action pin checked against its tag | [infra/VERIFICATION.md](infra/VERIFICATION.md) |
+| CI on GitHub Actions | every job passes | 11 jobs green on ubuntu-24.04: lint, unit, coverage gate, integration and Pact, BDD, chaos, front end, security, infrastructure, image, ZAP | [infra/VERIFICATION.md](infra/VERIFICATION.md) (R15) |
 
 What the numbers do not show, stated plainly in [docs/architecture.md](docs/architecture.md#scaling-and-limits-measured):
 the laptop could generate about 2x, not 3x, and not for five minutes, and latency
@@ -154,7 +155,7 @@ tracked; each is produced from the code here:
 ## Known issues
 
 - The Claude-driven agent is tested against a stub of the API client, not against the live API: no key was available while the evidence was produced.
-- The Compose stack was run end to end. The Helm chart and Terraform were checked with the real tools (lint, schema validation, `terraform validate`) but not installed on a cluster or applied to an AWS account. The CI workflow has not run on GitHub yet. See [infra/VERIFICATION.md](infra/VERIFICATION.md).
+- The Compose stack was run end to end. The Helm chart and Terraform were checked with the real tools (lint, schema validation, `terraform validate`) but not installed on a cluster or applied to an AWS account. See [infra/VERIFICATION.md](infra/VERIFICATION.md).
 - Binary formats need the OEM's schema. The agent reuses a Protobuf descriptor already registered for the source; without one it says so, records the refusal, and asks for the descriptor.
 - The model is trained and evaluated on synthetic formats from one simulator. Expect lower accuracy on real feeds, which is why every proposal must pass the golden set and a person.
 
