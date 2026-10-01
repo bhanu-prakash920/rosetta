@@ -477,8 +477,15 @@ jobs:
           terraform validate
       - name: Prometheus configuration and rules
         run: |
+          # promtool checks that the bearer token file the scrape config names
+          # exists and is readable. Compose creates it from ROSETTA_METRICS_TOKEN
+          # when the stack runs; this job only reads the files, so stand in a
+          # throwaway one. Without it the check fails on the missing path and
+          # never reaches the rules.
+          printf 'not-a-real-token' > "$RUNNER_TEMP/metrics_token"
           docker run --rm --entrypoint promtool \
             -v "$PWD/infra/prometheus:/etc/prometheus:ro" \
+            -v "$RUNNER_TEMP/metrics_token:/run/secrets/metrics_token:ro" \
             prom/prometheus:v3.13.4 check config /etc/prometheus/prometheus.yml
       - name: Grafana dashboard is valid JSON
         run: python3 -c "import json; d = json.load(open('infra/grafana/dashboards/rosetta-pipeline.json')); print(len(d['panels']), 'panels')"
