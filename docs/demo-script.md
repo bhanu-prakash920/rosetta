@@ -22,8 +22,10 @@ Speak slowly: the spoken lines below come to about 1,150 words, roughly 130 a mi
    - Window A: signed in as `engineer@rosetta.example`
    - Window B (private window): signed in as `analyst@rosetta.example`
    - Password for both: `rosetta-demo-2026`
-4. Have these ready in tabs: `docs/diagrams/architecture.png` (or the architecture
-   section of the solution PDF), `docs/diagrams/bench_burst.png`, the README "Results" table.
+4. Have these ready in tabs: `docs/diagrams/c4_containers.png` (the architecture:
+   containers, stores and protocols), `docs/diagrams/bench_burst.png`, and the README
+   "Results" table. Both images are build outputs, so generate them first with
+   `.venv/bin/python scripts/draw_diagrams.py` and `.venv/bin/python scripts/draw_charts.py`.
 5. Record at 1080p, close notifications, zoom the browser to 110% so text is readable.
 
 ## The script
@@ -171,7 +173,7 @@ drift appear on Live, and just explain the canary with the Sources page.)*
 > "What if a server crashes? I'll kill a worker, the way a machine dies.
 > The queue grows. The supervisor restarts it from its last checkpoint. The queue drains."
 
-**[6:20] Show `bench_burst.png`.**
+**[6:20] Show `docs/diagrams/bench_burst.png`.**
 
 > "We tested this properly. We killed four processes under full load: zero events lost,
 > zero stored twice. And in a traffic burst, the backlog grew to 1.4 million messages
@@ -213,7 +215,7 @@ drift appear on Live, and just explain the canary with the Sources page.)*
 > - Over **2,700 automated tests**, 93 percent code coverage, all green in CI.
 > - Security scans, including OWASP ZAP against the running API, pass."
 
-**[8:20] Show the architecture diagram.**
+**[8:20] Show the architecture diagram (`docs/diagrams/c4_containers.png`).**
 
 > "Under the hood: MQTT for the cars, Kafka as the message queue, Python services
 > for translation, Redis, PostgreSQL and Parquet for storage, a React dashboard,

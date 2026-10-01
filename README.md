@@ -167,7 +167,7 @@ tracked; each is produced from the code here:
 
 | Output | Command |
 |---|---|
-| `docs/diagrams/*.png` (architecture, ER, deployment, layers) | `.venv/bin/python scripts/draw_diagrams.py` |
+| `docs/diagrams/*.png`: `c4_context`, `c4_containers` (the architecture), `deployment`, `layers`, `er`, `seq_onboarding`, `seq_failure` | `.venv/bin/python scripts/draw_diagrams.py` |
 | `docs/diagrams/bench_*.png`, `ml_vs_baseline.png` | `.venv/bin/python scripts/draw_charts.py` |
 | `docs/screenshots/*.png` | `make run`, then `cd web && node scripts/screenshots.mjs http://127.0.0.1:8765 ../docs/screenshots` |
 | `docs/Rosetta_Solution_Document.docx` | `.venv/bin/python scripts/solution_doc/build.py` (needs the organisers' template in the repository root) |
