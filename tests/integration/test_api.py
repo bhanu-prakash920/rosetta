@@ -181,6 +181,33 @@ def test_simulator_control_and_scenarios(api, engineer, analyst):
     assert api.post("/api/v1/simulator", json={"drift_pct": 0}, headers=engineer).status_code == 200
 
 
+def test_a_new_source_can_be_turned_off_again(api, engineer):
+    """Every scenario in the console is a toggle, so launching a maker must be undoable
+    without resetting everything else the demo has set up."""
+    on = api.post("/api/v1/simulator/scenario/launch_helix", headers=engineer)
+    assert on.status_code == 200 and "helix" in on.json()["applied"]["enabled"]
+
+    off = api.post("/api/v1/simulator/scenario/stop_helix", headers=engineer)
+    assert off.status_code == 200
+    enabled = off.json()["applied"]["enabled"]
+    assert "helix" not in enabled           # the new maker stops sending
+    assert "nordvik" in enabled             # and the rest of the fleet carries on
+    assert "drift_pct" not in off.json()["applied"]   # nothing else is disturbed
+
+
+def test_ending_one_scenario_does_not_end_another(api, engineer):
+    """Ending the firmware update used to run the whole demo reset, which also dropped
+    the new maker that a separate scenario had launched."""
+    api.post("/api/v1/simulator/scenario/launch_helix", headers=engineer)
+    api.post("/api/v1/simulator/scenario/ota_drift", headers=engineer)
+
+    done = api.post("/api/v1/simulator/scenario/ota_reset", headers=engineer)
+    assert done.status_code == 200
+    applied = done.json()["applied"]
+    assert applied == {"drift_pct": 0}          # only the drift is cleared
+    assert "enabled" not in applied             # the new maker keeps sending
+
+
 def test_ingest_over_http(api, admin, analyst):
     body = b'{"VIN":"5PAEV1A2XTA000035","ts":1790000102.12,"msg_no":424242,"lat":13.0,"lng":80.2,"hdg":1,' \
            b'"speed_mph":10,"odometer_mi":100,"oat_f":80,"ign":"ON","dtcs":""}\n'

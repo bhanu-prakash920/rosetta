@@ -140,13 +140,17 @@ class SimPatch(BaseModel):
 
 SCENARIOS: dict[str, dict[str, Any]] = {
     "launch_helix": {"_enable": "helix"},
+    "stop_helix": {"_disable": "helix"},
     "ota_drift": {"drift_pct": 35},
+    "ota_reset": {"drift_pct": 0},
     "outage": {"outage_pct": 20},
     "recover": {"outage_pct": 0},
     "shift_start": {"burst": 30.0},
     "calm": {"burst": 1.0},
     "pause": {"paused": True},
     "resume": {"paused": False},
+    # the whole demo back to its opening state, including dropping the new maker again.
+    # Each scenario also has its own narrow off switch, so ending one never ends another.
     "reset": {"drift_pct": 0, "outage_pct": 0, "burst": 1.0, "paused": False, "dup_pct": 1.5,
               "reorder_pct": 2.0, "malformed_pct": 0.05, "mode": "realistic", "hz": 1.0,
               "enabled": [k for k in OEM_KEYS if k != "helix"]},
@@ -159,10 +163,17 @@ def _current() -> dict[str, Any]:
 
 
 def _apply(patch: dict[str, Any], who: Principal, label: str) -> dict[str, Any]:
-    en = patch.pop("_enable", None)
-    if en:
+    en, dis = patch.pop("_enable", None), patch.pop("_disable", None)
+    if en or dis:
         cur = _current().get("enabled") or [k for k in OEM_KEYS if k != "helix"]
-        patch["enabled"] = sorted(set(cur) | {en}, key=OEM_KEYS.index)
+        wanted = set(cur)
+        if en:
+            wanted.add(en)
+        if dis:
+            wanted.discard(dis)
+        if not wanted:
+            raise HTTPException(422, "that would leave the fleet with no sources")
+        patch["enabled"] = sorted(wanted, key=OEM_KEYS.index)
     if "enabled" in patch:
         bad = [k for k in patch["enabled"] if k not in OEM_KEYS]
         if bad:

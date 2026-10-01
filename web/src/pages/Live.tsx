@@ -8,8 +8,8 @@ import { useAction, useApi, useCan, useLive } from "../lib/hooks";
 import type { Overview } from "../lib/types";
 
 const SCENARIOS: { key: string; off?: string; title: string; text: string; on: (o: Overview) => boolean }[] = [
-  { key: "launch_helix", title: "A new maker starts sending", text: "Helix Mobility comes online. The platform has no mapping for it.", on: (o) => !!o.simulator.enabled?.includes("helix") },
-  { key: "ota_drift", off: "reset", title: "Firmware update", text: "35% of Pacifica vehicles rename two fields and switch to metric.", on: (o) => (o.simulator.drift_pct ?? 0) > 0 },
+  { key: "launch_helix", off: "stop_helix", title: "A new maker starts sending", text: "Helix Mobility comes online. The platform has no mapping for it.", on: (o) => !!o.simulator.enabled?.includes("helix") },
+  { key: "ota_drift", off: "ota_reset", title: "Firmware update", text: "35% of Pacifica vehicles rename two fields and switch to metric.", on: (o) => (o.simulator.drift_pct ?? 0) > 0 },
   { key: "outage", off: "recover", title: "Network outage", text: "20% of devices go offline and buffer. Recovery floods the intake.", on: (o) => (o.simulator.outage_pct ?? 0) > 0 },
   { key: "shift_start", off: "calm", title: "Shift start", text: "Parked vehicles start within seconds of each other.", on: (o) => (o.simulator.burst ?? 1) > 1 },
   { key: "pause", off: "resume", title: "Pause the fleet", text: "Stop the simulator. The pipeline drains and idles.", on: (o) => !!o.simulator.paused },

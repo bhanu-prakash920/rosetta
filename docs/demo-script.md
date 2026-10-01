@@ -15,6 +15,9 @@ Speak slowly: the spoken lines below come to about 1,150 words, roughly 130 a mi
    finishes, show **Model**. If it is flaky, pick **Deterministic** (fast, always
    finishes) and just *say* that a model can drive the same tools.
    After rehearsing, reset again (step 1) so Helix is unknown for the real take.
+   The scenario's own off switch stops Helix sending, which is enough to rerun the
+   earlier parts, but it leaves the parked messages and any approved mapping in
+   place. Only step 1 makes the platform forget Helix completely.
 3. Open two browser windows on http://127.0.0.1:8765:
    - Window A: signed in as `engineer@rosetta.example`
    - Window B (private window): signed in as `analyst@rosetta.example`

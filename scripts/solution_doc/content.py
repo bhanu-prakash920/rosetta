@@ -52,7 +52,7 @@ def build_sections(d: Any, ev: Path, root: Path) -> dict[str, Any]:
             f"target; {n(st_a['simulator_sent'])} events and {st_a['unaccounted']} unaccounted. Four worker processes killed with "
             f"SIGKILL under load: all recovered, nothing lost, nothing stored twice. The field-mapping model is "
             f"{ms['exact_label_accuracy']:.1%} correct on formats whose names it never saw, against {bs['exact_label_accuracy']:.1%} "
-            f"for a name-matching baseline. {cov['meta'] and ''}{n(2764)} automated tests, {cov_pct:.0f}% line coverage. The production stack runs from one command in Docker Compose, and a restart or SIGKILL of the MQTT gateway under load loses nothing."),
+            f"for a name-matching baseline. {cov['meta'] and ''}{n(2766)} automated tests, {cov_pct:.0f}% line coverage. The production stack runs from one command in Docker Compose, and a restart or SIGKILL of the MQTT gateway under load loses nothing."),
         d.p("**What is new.** Mappings are data from a whitelist, compiled to specialised code at run time, so an agent can propose "
             "one without being able to run arbitrary code. The agent identifies units from physics: a field always 0.278 times the "
             "GPS-derived speed is metres per second, whatever it is called. And onboarding is zero downtime by construction: park, "
@@ -427,7 +427,7 @@ segment(ts, speed):                          # Viterbi, O(n)
          ["Compliance & Chaos", "erasure and audit-chain tests; SIGKILL chaos script; gateway restart and SIGKILL in Compose", "6 checks + 1", "all pass: 0 lost, 0 duplicated; 615,464 of 615,464 over MQTT", "Yes"]],
         [1.8, 3.2, 1.4, 1.8, 0.8], size=15)
     AF["9. Test Strategy"] = "".join([
-        d.p(f"**Coverage:** {cov_pct:.1f}% of lines over every suite that needs no Docker (2,764 tests)."),
+        d.p(f"**Coverage:** {cov_pct:.1f}% of lines over every suite that needs no Docker (2,766 tests)."),
         d.p("**Edge cases covered:** duplicates up to 30%, out-of-order delivery, events older than the dedup window, truncated and empty "
             "payloads, corrupted VIN check digits, oversize payloads, unknown sources, format drift for part of a fleet, a worker killed "
             "between batches, after producing but before committing, and after writing a file but before committing; a replay run twice; "
