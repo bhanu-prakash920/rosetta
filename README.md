@@ -160,6 +160,7 @@ tracked; each is produced from the code here:
 
 ## Declarations
 
+This project is released under the MIT licence ([LICENSE](LICENSE)).
 Open-source components are listed in `pyproject.toml` and `web/package.json`
 (`make sbom` writes the installed versions). One photograph in the console is from
 Wikimedia Commons under CC BY 2.0; two images were generated with Google Gemini and
