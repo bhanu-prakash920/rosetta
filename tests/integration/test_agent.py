@@ -502,3 +502,22 @@ def test_a_rate_limit_with_no_advice_is_not_waited_out(parked: World, monkeypatc
         run = agent_service.run_agent(s, "helix", requested_by="test", engine="google", client=NoAdvice())
         assert "rate limited" in run.engine and "retry in" not in run.engine
         assert not [x for x in slept if x >= 1.0]
+
+
+def test_a_missing_client_library_falls_back_rather_than_failing(parked: World, monkeypatch):
+    """Each SDK is imported where it is used, so an install carrying only one still runs.
+    The other one going missing must degrade like a missing key, not end the run."""
+    import builtins
+
+    real = builtins.__import__
+
+    def no_google(name, *a, **kw):
+        if name.startswith("google"):
+            raise ImportError("No module named 'google.genai'", name="google.genai")
+        return real(name, *a, **kw)
+
+    monkeypatch.setattr(builtins, "__import__", no_google)
+    with session_scope() as s:
+        run = agent_service.run_agent(s, "helix", requested_by="test", engine="google")
+        assert run.status == "awaiting_approval"              # the workflow finished the job
+        assert "not installed" in run.engine and "workflow" in run.engine

@@ -184,10 +184,16 @@ def run(tb: Toolbox, client: Any = None, max_turns: int = MAX_TURNS,
     provider = provider or detect_provider()
     if provider is None:
         return {"status": "unavailable", "reason": "no model credentials are configured"}
-    if provider == "google":
-        return _run_google(tb, client, max_turns)
-    if provider == "anthropic":
-        return _run_anthropic(tb, client, max_turns)
+    try:
+        if provider == "google":
+            return _run_google(tb, client, max_turns)
+        if provider == "anthropic":
+            return _run_anthropic(tb, client, max_turns)
+    except ImportError as e:
+        # Each provider's SDK is imported where it is used, so a deployment carrying only
+        # one of them still runs. A missing one is as recoverable as a missing key.
+        return {"status": "unavailable",
+                "reason": f"the {provider} client library is not installed ({e.name})"}
     return {"status": "unavailable", "reason": f"unknown provider {provider!r}"}
 
 
