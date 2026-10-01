@@ -10,6 +10,8 @@ vehicles in CPython, 1.6 MB with the numpy variant).
 """
 from __future__ import annotations
 
+from typing import Any
+
 NEW = 0        # first time we see this sequence number
 DUPLICATE = 1  # seen before, inside the window
 STALE = 2      # older than the window: caller must use the late-event path
@@ -74,6 +76,28 @@ class BatchReplayWindow:
         self.np = np
         self.top = np.full(n, -1, dtype=np.int64)
         self.mask = np.zeros(n, dtype=np.uint64)
+
+    def snapshot(self) -> dict[str, Any]:
+        """Both arrays, copied. The pair is the whole state: nothing else is needed."""
+        return {"top": self.top.copy(), "mask": self.mask.copy()}
+
+    def restore(self, snap: dict[str, Any]) -> bool:
+        """Load a snapshot taken by this class. False when it does not fit this fleet.
+
+        A SIGKILL takes `top` and `mask` with it, and a window that starts empty
+        calls everything new until it has seen each vehicle once. Anything
+        redelivered into that gap is accepted a second time. Restoring the exact
+        pair keeps detection exact, which guessing cannot: the mark alone says
+        nothing about which lower sequence numbers arrived, and assuming they all
+        did would drop a late one that never did.
+        """
+        np = self.np
+        top, mask = snap.get("top"), snap.get("mask")
+        if top is None or mask is None or len(top) != self.top.size or len(mask) != self.mask.size:
+            return False
+        self.top = np.asarray(top, dtype=np.int64).copy()
+        self.mask = np.asarray(mask, dtype=np.uint64).copy()
+        return True
 
     def check_batch(self, idx, seq):
         """Return a boolean array: True where the event is new, False where it is a duplicate."""

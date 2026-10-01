@@ -24,7 +24,7 @@ Option 3, with an idempotency mechanism per sink:
 | Stage | Duplicate source | Mechanism |
 |---|---|---|
 | Normaliser | Device resends, simulator duplicates | Per-vehicle replay window: highest sequence number and a 64-bit mask of the ones below it. Exact, O(1). Older than the window: Bloom filter, then an exact store only on a "maybe" (Redis `SET NX EX` in production) |
-| Processor | Normaliser redelivery after a crash | The same window, vectorised with numpy over the whole batch |
+| Processor | Normaliser redelivery after a crash | The same window, vectorised with numpy over the whole batch. A killed normaliser republishes at fresh offsets, so no offset recognises those and only the window can: it is checkpointed next to the archive and restored on start, because one that begins empty calls everything new until it has seen each vehicle once |
 | Hot state | Replays | Last-write-wins by event time |
 | Archive | Crash between "file written" and "offsets committed" | The consumer positions are stored inside the Parquet file's metadata. A restarted processor resumes from its newest file. Data and position become durable in one atomic rename |
 | Alerts | Replays | Unique constraint (vehicle, kind, event time) with `ON CONFLICT DO NOTHING` |
@@ -34,13 +34,24 @@ Option 3, with an idempotency mechanism per sink:
 
 - `tests/chaos/kill_and_recover.py` sends SIGKILL to two normalisers, a processor
   and the dead-letter worker under load. Result in `docs/evidence/chaos.json`: all
-  restarted, 119 canonical records were redelivered, the archive holds 717,448 rows
-  and 717,448 distinct events, and every raw message is accounted for.
+  restarted, 16,918 canonical records were redelivered, every one of them absorbed,
+  the archive holds 717,449 rows and 717,449 distinct events, it holds every event
+  that was translated, and every raw message is accounted for.
 - `tests/integration/test_pipeline.py::test_crash_between_archive_write_and_commit_stores_nothing_twice`
-  exercises the narrowest window directly.
+  exercises the narrowest window directly, and
+  `test_a_restarted_processor_rejects_a_normalisers_redelivery` the wider one: without
+  the restored window every republished event is archived a second time.
 
 ## Consequences
 
 The window is 64 sequence numbers per vehicle. A vehicle that resends something
 older takes the Bloom path, which is exact but costs a store lookup on a "maybe".
 Devices that reset their counter must be reset in the window (`ReplayWindow.reset`).
+
+The processor's checkpoint is two arrays, 16 bytes per vehicle: 1.6 MB for 100,000
+vehicles, 1.8 ms to write, once per archive flush. It is written after the archive
+and before the offsets are committed, so it can only lag the archive, never lead it.
+Lagging costs a duplicate; leading would drop an event. Both arrays are kept, not
+just the newest sequence number, because the number alone cannot say which of the 64
+below it arrived: assuming all of them did drops a genuinely late event, which the
+chaos test catches as a missing row.

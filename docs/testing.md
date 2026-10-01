@@ -15,7 +15,7 @@
 | Load, API | `tests/load/locustfile.py` | Locust, three user types | see evidence | see evidence |
 | Security scans | local and CI | bandit, Semgrep, pip-audit, npm audit, Trivy (file system and image), OWASP ZAP baseline and authenticated API scan | 9 scans | every CI gate passes; reports and triage in `docs/evidence/security/` |
 
-Line coverage over all 2,737 tests that need no Docker: **93.6%** (92.2% with
+Line coverage over all 2,755 tests that need no Docker: **93.7%** (92.4% with
 branches, `docs/evidence/coverage.json`). Unit tests alone cover the core modules
 (domain, algorithms, engine, adapters) at 89 to 100% each.
 

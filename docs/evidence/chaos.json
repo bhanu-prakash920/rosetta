@@ -16,7 +16,7 @@
   "processes_after": [
     {
       "name": "dlq-0",
-      "pid": 98509,
+      "pid": 82958,
       "alive": true,
       "restarts": 1,
       "last_exit": -9,
@@ -24,15 +24,15 @@
     },
     {
       "name": "normalizer-0",
-      "pid": 98536,
+      "pid": 83007,
       "alive": true,
       "restarts": 1,
       "last_exit": -9,
-      "uptime_s": 19
+      "uptime_s": 18
     },
     {
       "name": "normalizer-1",
-      "pid": 98507,
+      "pid": 82821,
       "alive": true,
       "restarts": 1,
       "last_exit": -9,
@@ -40,7 +40,7 @@
     },
     {
       "name": "normalizer-2",
-      "pid": 98477,
+      "pid": 82702,
       "alive": true,
       "restarts": 0,
       "last_exit": null,
@@ -48,7 +48,7 @@
     },
     {
       "name": "processor-0",
-      "pid": 98508,
+      "pid": 82889,
       "alive": true,
       "restarts": 1,
       "last_exit": -9,
@@ -56,7 +56,7 @@
     },
     {
       "name": "processor-1",
-      "pid": 98479,
+      "pid": 82704,
       "alive": true,
       "restarts": 0,
       "last_exit": null,
@@ -64,7 +64,7 @@
     },
     {
       "name": "simulator-0",
-      "pid": 98481,
+      "pid": 82706,
       "alive": true,
       "restarts": 0,
       "last_exit": null,
@@ -72,22 +72,22 @@
     }
   ],
   "counts": {
-    "raw_messages": 810359,
-    "raw_distinct": 798939,
-    "raw_duplicates_sent_by_simulator": 11420,
-    "canonical_records": 717567,
-    "canonical_distinct_events": 717448,
-    "canonical_redelivered_after_kill": 119,
-    "dead_letter_records": 83418,
+    "raw_messages": 810361,
+    "raw_distinct": 798940,
+    "raw_duplicates_sent_by_simulator": 11421,
+    "canonical_records": 734367,
+    "canonical_distinct_events": 717449,
+    "canonical_redelivered_after_kill": 16918,
+    "dead_letter_records": 84979,
     "dead_letter_distinct": 81491,
     "dead_letters_by_reason": {
-      "INVALID": 188,
-      "DECODE_ERROR": 173,
-      "NO_ADAPTER": 83054,
-      "SCHEMA_MISMATCH": 3
+      "INVALID": 191,
+      "DECODE_ERROR": 179,
+      "NO_ADAPTER": 84607,
+      "SCHEMA_MISMATCH": 2
     },
-    "archive_rows": 717448,
-    "archive_distinct": 717448
+    "archive_rows": 717449,
+    "archive_distinct": 717449
   },
   "checks": {
     "killed_processes_restarted": true,
@@ -102,31 +102,31 @@
     {
       "t": 1.0,
       "event": "status",
-      "raw_bytes": 6230397,
+      "raw_bytes": 6230562,
       "restarts": {}
     },
     {
       "t": 6.0,
       "event": "status",
-      "raw_bytes": 38171041,
+      "raw_bytes": 38185879,
       "restarts": {}
     },
     {
       "t": 11.0,
       "event": "SIGKILL",
       "process": "normalizer-1",
-      "pid": 98476
+      "pid": 82701
     },
     {
-      "t": 11.1,
+      "t": 11.0,
       "event": "status",
-      "raw_bytes": 70352379,
+      "raw_bytes": 70386535,
       "restarts": {}
     },
     {
       "t": 16.1,
       "event": "status",
-      "raw_bytes": 102570534,
+      "raw_bytes": 102623071,
       "restarts": {
         "normalizer-1": 1
       }
@@ -135,12 +135,12 @@
       "t": 17.1,
       "event": "SIGKILL",
       "process": "processor-0",
-      "pid": 98478
+      "pid": 82703
     },
     {
       "t": 21.1,
       "event": "status",
-      "raw_bytes": 134794274,
+      "raw_bytes": 134852956,
       "restarts": {
         "normalizer-1": 1,
         "processor-0": 1
@@ -150,12 +150,12 @@
       "t": 23.1,
       "event": "SIGKILL",
       "process": "dlq-0",
-      "pid": 98480
+      "pid": 82705
     },
     {
       "t": 26.1,
       "event": "status",
-      "raw_bytes": 166988461,
+      "raw_bytes": 167061792,
       "restarts": {
         "dlq-0": 1,
         "normalizer-1": 1,
@@ -166,12 +166,12 @@
       "t": 29.1,
       "event": "SIGKILL",
       "process": "normalizer-0",
-      "pid": 98475
+      "pid": 82700
     },
     {
       "t": 31.1,
       "event": "status",
-      "raw_bytes": 199235383,
+      "raw_bytes": 199318686,
       "restarts": {
         "dlq-0": 1,
         "normalizer-0": 1,
@@ -182,7 +182,7 @@
     {
       "t": 36.1,
       "event": "status",
-      "raw_bytes": 231414179,
+      "raw_bytes": 231508098,
       "restarts": {
         "dlq-0": 1,
         "normalizer-0": 1,

@@ -240,3 +240,44 @@ def test_batch_with_many_vehicles_and_one_event_each():
     assert w.check_batch(idx, seq).all()
     assert not w.check_batch(idx, seq).any()
     assert w.check_batch(idx, seq + 1).all()
+
+
+def test_snapshot_and_restore_carry_the_window_exactly():
+    """What a restarted worker needs: the pair is the state, so recovery stays exact."""
+    w = BatchReplayWindow(3)
+    w.check_batch(np.array([0, 0, 2]), np.array([500, 498, 7]))
+    snap = w.snapshot()
+
+    restarted = BatchReplayWindow(3)
+    assert restarted.restore(snap) is True
+    idx = np.array([0, 0, 0, 2, 2], dtype=np.int64)
+    seq = np.array([500, 498, 501, 7, 8], dtype=np.int64)
+    #              seen, seen, new, seen, new
+    assert restarted.check_batch(idx, seq).tolist() == [False, False, True, False, True]
+
+
+def test_restore_keeps_a_gap_in_the_window_open():
+    """499 never arrived, so it is not a duplicate. Assuming it had would lose it."""
+    w = BatchReplayWindow(1)
+    w.check_batch(np.array([0, 0]), np.array([498, 500]))
+    restarted = BatchReplayWindow(1)
+    restarted.restore(w.snapshot())
+    assert restarted.check_batch(np.array([0]), np.array([499])).tolist() == [True]
+    assert restarted.check_batch(np.array([0]), np.array([499])).tolist() == [False]
+
+
+def test_restore_refuses_a_snapshot_of_a_different_fleet():
+    w = BatchReplayWindow(4)
+    w.check_batch(np.array([0]), np.array([9]))
+    assert BatchReplayWindow(5).restore(w.snapshot()) is False
+    assert BatchReplayWindow(4).restore({"top": w.top}) is False
+    assert BatchReplayWindow(4).restore({}) is False
+
+
+def test_a_restored_window_still_accepts_an_event_older_than_the_window():
+    """Older than the mark by more than the window: stale, so the late path decides."""
+    w = BatchReplayWindow(1)
+    w.check_batch(np.array([0]), np.array([1_000]))
+    restarted = BatchReplayWindow(1)
+    restarted.restore(w.snapshot())
+    assert restarted.check_batch(np.array([0]), np.array([1_000 - WINDOW])).tolist() == [True]

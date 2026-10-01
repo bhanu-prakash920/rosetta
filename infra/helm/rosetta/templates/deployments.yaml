@@ -188,11 +188,15 @@ spec:
               readOnly: true
             {{- end }}
       volumes:
-        # The root file system is read-only. ROSETTA_DATA_DIR is where the
-        # normaliser keeps its de-duplication checkpoint. An emptyDir survives
-        # a restart of the container and is lost with the pod, which is safe:
-        # offsets are committed to Kafka, and a fresh replica re-reads at most
-        # the records since the last commit, which the processor de-duplicates.
+        # The root file system is read-only. ROSETTA_DATA_DIR is where the normaliser
+        # and the processor keep their de-duplication checkpoints. An emptyDir survives
+        # a restart of the container, so a restarted one resumes exact de-duplication.
+        # It is lost with the pod, and nothing is lost with it: offsets are committed to
+        # Kafka and a fresh replica re-reads at most the records since the last commit.
+        # Until that replica has seen each vehicle once its window is empty, so a repeat
+        # of one of those records can reach the archive twice. The alert and telemetry
+        # tables reject repeats outright; the Parquet archive is append-only, so a batch
+        # report over that window can count a few events twice.
         - name: data
           emptyDir:
             sizeLimit: {{ $c.dataSizeLimit }}

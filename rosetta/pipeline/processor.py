@@ -16,7 +16,9 @@ from __future__ import annotations
 import os
 import signal
 import time
+import zipfile
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -78,7 +80,8 @@ class Processor:
     def __init__(self, worker_id: int = 0, workers: int = 1, broker: Any = None,
                  partitions: Sequence[int] | None = None, batch: int = 5000,
                  archive_every_s: float = 5.0, archive_rows: int = 60_000,
-                 write_db_alerts: bool = True, group: str = "processor") -> None:
+                 write_db_alerts: bool = True, group: str = "processor",
+                 checkpoint_dir: Path | None = None) -> None:
         st = get_settings()
         self.id = worker_id
         self.broker = broker or make_broker(st)
@@ -109,6 +112,14 @@ class Processor:
         self.vin_array = pa.array(vins, pa.string())
         # idempotence: the canonical topic is at-least-once, so the sink drops repeats
         self.window = BatchReplayWindow(len(vins))
+        # Seeking past what the archive holds covers this worker's own replay, but not a
+        # normaliser's: a killed one republishes canonical events at fresh offsets, which no
+        # offset can recognise. Only the window can, and one that starts empty cannot until
+        # it has seen each vehicle once, so it is checkpointed beside the archive and
+        # restored here. The normaliser keeps its own window the same way.
+        self.ckpt = (checkpoint_dir or st.data_dir / "checkpoints") / f"processor-{worker_id}.npz"
+        self.ckpt.parent.mkdir(parents=True, exist_ok=True)
+        self._restore_window()
         self.dtc_seen: dict[int, frozenset] = {}
         self.write_db_alerts = write_db_alerts
         self.watermark = 0
@@ -247,6 +258,29 @@ class Processor:
         except Exception:
             pass  # the alert is already on the alerts topic; the table is a read model
 
+    # ------------------------------------------------------------- checkpoints
+    def _restore_window(self) -> bool:
+        try:
+            # allow_pickle stays off: a checkpoint is data, never code
+            with np.load(self.ckpt) as z:
+                return self.window.restore({"top": z["top"], "mask": z["mask"]})
+        except (EOFError, KeyError, OSError, TypeError, ValueError, zipfile.BadZipFile):
+            # none, unreadable, or written for a different fleet. Starting empty costs
+            # duplicates after a crash; refusing to start would cost everything.
+            return False
+
+    def _checkpoint_window(self) -> None:
+        """Written straight after the archive, so it never claims more than the archive holds.
+
+        A crash in between leaves the window a little behind, which costs a duplicate at
+        worst. Ahead would cost a dropped event, so the order matters.
+        """
+        snap = self.window.snapshot()
+        tmp = self.ckpt.with_suffix(".tmp.npz")
+        with open(tmp, "wb") as fh:
+            np.savez(fh, top=snap["top"], mask=snap["mask"])
+        os.replace(tmp, self.ckpt)
+
     def flush_archive(self) -> None:
         if not self.pending:
             return
@@ -256,6 +290,7 @@ class Processor:
             self.sink.write(table)       # idempotent: ON CONFLICT DO NOTHING
         self.n_archived += table.num_rows
         self.pending, self.pending_rows = [], 0
+        self._checkpoint_window()
 
     # ------------------------------------------------------------------- loop
     def step(self, timeout_s: float = 0.2) -> int:

@@ -31,10 +31,10 @@ Every number links to the file it comes from.
 | 3x burst | survive, no loss | 0 lost; backlog 1.4 M drained 25 s after the burst; p99 latency 12 s during it | [bench_burst.json](docs/evidence/bench_burst.json) |
 | Soak, 10 minutes at 50,000 events/s | stable | 30.9 M events, 0 unaccounted, 0 restarts, p99 351 ms | [bench_soak.json](docs/evidence/bench_soak.json) |
 | API under load, pipeline running | p95 under 200 ms, p99 under 500 ms | p95 120 ms, p99 370 ms, 0 of 8,353 requests failed, 94 requests/s from one API process | [locust.json](docs/evidence/locust.json) |
-| Processes killed with SIGKILL under load | recover | 4 killed, all restarted, 0 lost, 0 stored twice | [chaos.json](docs/evidence/chaos.json) |
+| Processes killed with SIGKILL under load | recover | 4 killed, all restarted, 0 lost, 0 stored twice; 16,918 events redelivered after the kills, every one absorbed | [chaos.json](docs/evidence/chaos.json) |
 | Field mapping on formats with unseen names | beat a baseline | 99.1% field and unit correct, against 35.8% for name matching; whole format right 96.9% against 0% | [ml_field_mapper.json](docs/evidence/ml_field_mapper.json) |
 | Slowest queries | faster | 38x to 8,000x, EXPLAIN ANALYZE before and after on PostgreSQL 16 | [sql_explain.md](docs/evidence/sql_explain.md) |
-| Tests | 80% coverage | 2,737 tests pass without Docker, 93.6% line coverage; 13 more against real Kafka, PostgreSQL, TimescaleDB, pgvector and Redis; 21 behaviour scenarios | [coverage.json](docs/evidence/coverage.json) |
+| Tests | 80% coverage | 2,755 tests pass without Docker, 93.7% line coverage; 13 more against real Kafka, PostgreSQL, TimescaleDB, pgvector and Redis; 21 behaviour scenarios | [coverage.json](docs/evidence/coverage.json) |
 | Contracts between services | Pact | web console to API (8 interactions), normaliser to processor and to the dead-letter worker, processor to alert subscribers (10 messages); every provider verified | [tests/contract/pacts](tests/contract/pacts) |
 | Production stack in Docker Compose | one command, works | from empty volumes to 20 healthy services in 108 s; Kafka, TimescaleDB, pgvector, Redis, MinIO, EMQX, Prometheus, Loki, Tempo, Grafana | [compose_stack.json](docs/evidence/compose_stack.json) |
 | MQTT gateway restarted and SIGKILLed under load | no loss | 615,464 sent, 615,464 received, 0 dropped by the broker | [compose_mqtt_restart.json](docs/evidence/compose_mqtt_restart.json) |

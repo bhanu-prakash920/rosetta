@@ -265,3 +265,58 @@ def test_crash_between_archive_write_and_commit_stores_nothing_twice(fresh_world
     t = w.processor.archive.dataset().to_table(columns=["vin", "seq"])
     keys = pc.binary_join_element_wise(t["vin"], pc.cast(t["seq"], "string"), ":")
     assert t.num_rows == sent == pc.count_distinct(keys).as_py()
+
+
+def test_a_restarted_processor_rejects_a_normalisers_redelivery(fresh_world: World):
+    """The wider window: a killed normaliser republishes canonical events at fresh offsets.
+
+    Seeking past what the archive holds cannot catch those, because the offsets are new.
+    Only the replay window can, and a processor that has just restarted has an empty one
+    unless it is rebuilt from the state that outlived the crash.
+    """
+    import pyarrow.compute as pc
+
+    from rosetta.pipeline.processor import Processor
+
+    w = fresh_world
+    w.sim.s.dup_pct = w.sim.s.malformed_pct = w.sim.s.reorder_pct = 0.0
+    sent = w.tick(3)
+    while w.normalizer.step(0.0):
+        pass
+    w.pump()                                             # archived and committed
+    before = w.processor.archive.dataset().to_table(columns=["vin", "seq"]).num_rows
+    assert before == sent > 0
+
+    # the normaliser is killed after producing but before committing, so on restart it
+    # normalises the same raw messages again and republishes every canonical event
+    again = w.broker.consumer(T_CANONICAL, "replay-reader", start="beginning")
+    repeats = again.poll(sent, 0.0)
+    assert len(repeats) == sent
+    w.broker.produce(T_CANONICAL, repeats)
+
+    w.processor = Processor(broker=w.broker)             # and the processor restarts too
+    w.pump()
+
+    t = w.processor.archive.dataset().to_table(columns=["vin", "seq"])
+    keys = pc.binary_join_element_wise(t["vin"], pc.cast(t["seq"], "string"), ":")
+    assert pc.count_distinct(keys).as_py() == sent       # nothing new arrived
+    assert t.num_rows == before                          # and nothing was stored twice
+
+
+@pytest.mark.parametrize("corrupt", [b"", b"PK\x03\x04truncated", b"not a checkpoint at all"],
+                         ids=["empty", "truncated", "garbage"])
+def test_a_damaged_window_checkpoint_does_not_stop_the_processor(fresh_world: World, corrupt: bytes):
+    """Starting with an empty window costs duplicates. Refusing to start costs everything."""
+    from rosetta.pipeline.processor import Processor
+
+    w = fresh_world
+    w.run(ticks=2)
+    ckpt = w.processor.ckpt
+    assert ckpt.exists()                                 # the flush wrote one
+    ckpt.write_bytes(corrupt)
+
+    p = Processor(broker=w.broker)                        # starts, rather than raising
+    assert p._restore_window() is False                  # and says the checkpoint was no use
+    assert (p.window.top == -1).all()                    # so the window begins empty
+    w.processor = p
+    w.pump()                                             # and the pipeline keeps running
