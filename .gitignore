@@ -1,5 +1,7 @@
 # runtime data and caches
 data/
+# demo resets move the old world aside as data.<name>; each is gigabytes
+data.*/
 .venv/
 __pycache__/
 *.pyc

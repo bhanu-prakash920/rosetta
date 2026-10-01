@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+# The uploaded demo video. Empty leaves the template placeholders in place.
+VIDEO_URL = ""
+
 
 def _load(ev: Path, name: str) -> Any:
     p = ev / name
@@ -574,5 +577,9 @@ segment(ts, speed):                          # Viterbi, O(n)
                                       "mrupatel1@googlemail.com",
              "Problem Space Chosen:": "Multi-OEM data normalisation: onboarding new and changed OEM formats without downtime",
              "Repository URL:": "https://github.com/bhanu-prakash920/rosetta",
-             "Date of Submission:": "01/10/2026"}
-    return {"cover": cover, "answers": A, "tables": T, "after": AF, "video": None}
+             "Date of Submission:": "02/10/2026"}
+    # Set VIDEO_URL once the recording is uploaded. It fills the cover field and the
+    # link in section 13, which are two separate fields in the template.
+    if VIDEO_URL:
+        cover["Demo Video URL (\u2264 5 min):"] = VIDEO_URL
+    return {"cover": cover, "answers": A, "tables": T, "after": AF, "video": VIDEO_URL}
