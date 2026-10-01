@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 # The uploaded demo video. Empty leaves the template placeholders in place.
-VIDEO_URL = ""
+VIDEO_URL = "https://drive.google.com/file/d/1pnrFtk0vGUiFivNvc7bDuyoopWrbOTJk/view?usp=sharing"
 
 
 def _load(ev: Path, name: str) -> Any:
@@ -573,8 +573,7 @@ segment(ts, speed):                          # Viterbi, O(n)
     # An individual entry: one name, no team.
     cover = {"To be Submitted by:": "Bhanu Prakash Kusha",
              "Team Members & Roles:": "Bhanu Prakash Kusha, sole contributor "
-                                      "(architecture, implementation, tests, documentation), "
-                                      "mrupatel1@googlemail.com",
+                                      "(architecture, implementation, tests, documentation)",
              "Problem Space Chosen:": "Multi-OEM data normalisation: onboarding new and changed OEM formats without downtime",
              "Repository URL:": "https://github.com/bhanu-prakash920/rosetta",
              "Date of Submission:": "02/10/2026"}
