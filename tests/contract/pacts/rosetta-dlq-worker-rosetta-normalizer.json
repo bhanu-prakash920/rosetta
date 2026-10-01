@@ -1,0 +1,213 @@
+{
+  "consumer": {
+    "name": "rosetta-dlq-worker"
+  },
+  "interactions": [
+    {
+      "contents": {
+        "content": {},
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a message in a format no live mapping can read",
+      "matchingRules": {
+        "metadata": {
+          "attempts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "dead_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "detail": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "dev": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "field": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z_.\\[\\]0-9]*$"
+              }
+            ]
+          },
+          "oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "reason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^(NO_ADAPTER|SCHEMA_MISMATCH|TRANSFORM_ERROR)$"
+              }
+            ]
+          },
+          "rx": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "attempts": 1,
+        "contentType": "application/json",
+        "dead_ts": 1790000001000,
+        "detail": "no live mapping for this source",
+        "dev": "he-0000007",
+        "field": "",
+        "oem": "helix",
+        "reason": "NO_ADAPTER",
+        "rx": 1790000000980
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for nordvik and none for helix"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {},
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a message that decoded but failed canonical validation",
+      "matchingRules": {
+        "metadata": {
+          "attempts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "dead_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "detail": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "dev": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type"
+              }
+            ]
+          },
+          "field": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z_]+$"
+              }
+            ]
+          },
+          "oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "reason": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^(INVALID|DECODE_ERROR|OVERSIZE)$"
+              }
+            ]
+          },
+          "rx": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "attempts": 1,
+        "contentType": "application/json",
+        "dead_ts": 1790000002000,
+        "detail": "OUT_OF_RANGE: 999.0",
+        "dev": "he-0000007",
+        "field": "speed_kmh",
+        "oem": "nordvik",
+        "reason": "INVALID",
+        "rx": 1790000001980
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for nordvik and none for helix"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.5.8",
+      "models": "1.3.16"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "rosetta-normalizer"
+  }
+}

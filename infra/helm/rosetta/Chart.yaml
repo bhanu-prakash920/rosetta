@@ -1,0 +1,22 @@
+apiVersion: v2
+name: rosetta
+description: Rosetta, the universal OEM telemetry normalisation engine. API, MQTT gateway, normaliser, processor and dead-letter worker.
+type: application
+# version of this chart
+version: 1.0.0
+# version of the application image the chart deploys by default
+appVersion: "1.0.0"
+kubeVersion: ">=1.27.0-0"
+keywords:
+  - telemetry
+  - kafka
+  - timescaledb
+  - connected-vehicles
+home: https://rosetta.example
+maintainers:
+  - name: Rosetta platform team
+    email: platform@rosetta.example
+annotations:
+  # Kafka, PostgreSQL, Redis, object storage and the MQTT broker are not
+  # installed by this chart. They are managed services configured in values.yaml.
+  rosetta.example/external-dependencies: "kafka, postgresql (timescaledb, pgvector), redis, s3, mqtt"

@@ -1,0 +1,31 @@
+{{- if and .Values.api.enabled .Values.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "rosetta.fullname" . }}-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rosetta.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    {{- with .Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "rosetta.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  endpoints:
+    - port: http
+      path: /metrics
+      honorLabels: true        # keep the metrics' own `service` label (normalizer, processor, ...)
+      interval: {{ .Values.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout }}
+      {{- with .Values.serviceMonitor.bearerTokenKey }}
+      authorization:
+        type: Bearer
+        credentials:
+          name: {{ $.Values.secret.existingSecret }}
+          key: {{ . }}
+      {{- end }}
+{{- end }}

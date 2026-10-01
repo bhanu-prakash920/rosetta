@@ -1,0 +1,56 @@
+{
+  "label": "compose_mqtt_gateway_restart_and_kill",
+  "when": "2026-09-30T13:51:12Z",
+  "setup": "docker compose stack (Kafka, PostgreSQL/TimescaleDB, Redis, MinIO, EMQX 5.8.9), simulator publishing over MQTT QoS 1 at up to 5,000 events/s, one gateway (client id gateway-0), two normalisers",
+  "procedure": [
+    "pause the simulator, wait until EMQX inflight/queue and every consumer lag are 0, read the books (A)",
+    "resume; after 45 s `docker compose restart gateway` (SIGTERM, graceful)",
+    "after 40 s `docker kill --signal KILL rosetta-gateway-1`, then `docker compose start gateway`",
+    "after 40 s pause, drain as above, read the books (B)"
+  ],
+  "books_before": {
+    "sim_sent": 127634,
+    "sim_dups": 1755,
+    "saw": 145509,
+    "ok": 143498,
+    "failed": 67,
+    "dup_dropped": 1944,
+    "raw_lag": 0,
+    "proc_lag": 0,
+    "emqx_inflight": 0,
+    "emqx_enqueued": 0,
+    "emqx_dropped": 0
+  },
+  "books_after": {
+    "sim_sent": 743098,
+    "sim_dups": 10756,
+    "saw": 760973,
+    "ok": 749669,
+    "failed": 373,
+    "dup_dropped": 10931,
+    "raw_lag": 0,
+    "proc_lag": 0,
+    "emqx_inflight": 0,
+    "emqx_enqueued": 0,
+    "emqx_dropped": 0
+  },
+  "delta": {
+    "sim_sent": 615464,
+    "sim_dups": 9001,
+    "saw": 615464,
+    "ok": 606171,
+    "failed": 306,
+    "dup_dropped": 8987
+  },
+  "result": {
+    "sent": 615464,
+    "received_by_normaliser": 615464,
+    "lost": 0,
+    "emqx_messages_dropped_no_subscriber": 0,
+    "emqx_session_dropped": 0
+  },
+  "before_the_fix": {
+    "description": "gateway client id changed on every restart and the session lived 2 h: stale members of the shared group received a share of the traffic and dropped it; a graceful shutdown that ended the session made EMQX drop messages with no subscriber while the only gateway restarted",
+    "measured": "about 2.8% of unique events missing in the same procedure; EMQX messages.dropped.no_subscriber 15,149; a stale session with 1,441,272 dropped messages"
+  }
+}

@@ -1,0 +1,23 @@
+"""Store ports: the hot state (latest value per vehicle) and the telemetry archive."""
+from __future__ import annotations
+
+from typing import Any, Protocol
+
+import numpy as np
+
+
+class HotState(Protocol):
+    """Latest known state of every vehicle. Sub-millisecond reads for maps and the agent."""
+
+    def update_batch(self, cols: dict[str, np.ndarray]) -> int: ...
+    def get(self, vin: str) -> dict[str, Any] | None: ...
+    def snapshot(self) -> dict[str, np.ndarray]: ...
+    def close(self) -> None: ...
+
+
+class Archive(Protocol):
+    """Append-only columnar history for batch analytics."""
+
+    def write(self, table: Any, ts_ms: int) -> str: ...
+    def files(self) -> list[str]: ...
+    def close(self) -> None: ...

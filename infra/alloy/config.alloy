@@ -1,0 +1,52 @@
+// Grafana Alloy: collects the stdout of every container of this Compose project
+// and ships it to Loki. Rosetta services write one JSON object per line
+// (rosetta/observability/logs.py), so level, service and trace id become labels
+// or structured metadata that can be filtered in Grafana.
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=rosetta"]
+  }
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.containers.output
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.rosetta.receiver]
+}
+
+loki.process "rosetta" {
+  // Lines that are not JSON (Kafka, PostgreSQL, ...) pass through unchanged.
+  stage.json {
+    expressions = { level = "level", logger = "logger", trace_id = "trace_id" }
+  }
+  stage.labels {
+    values = { level = "" }
+  }
+  stage.structured_metadata {
+    values = { logger = "", trace_id = "" }
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

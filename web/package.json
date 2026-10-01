@@ -1,0 +1,34 @@
+{
+  "name": "rosetta-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5173",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "shots": "node scripts/screenshots.mjs",
+    "test:pact": "node -e \"require('fs').rmSync('../tests/contract/pacts/rosetta-web-console-rosetta-api.json',{force:true})\" && vitest run src/lib/api.pact.test.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/manrope": "^5.1.0",
+    "@fontsource/jetbrains-mono": "^5.1.0",
+    "leaflet": "^1.9.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@pact-foundation/pact": "^17.1.4",
+    "@types/leaflet": "^1.9.12",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "puppeteer-core": "^25.12.0",
+    "typescript": "^5.5.4",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  }
+}

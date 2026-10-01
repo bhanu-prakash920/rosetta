@@ -1,0 +1,93 @@
+{
+  "machine": {
+    "cpu": "arm64",
+    "python": "3.11.9"
+  },
+  "results": {
+    "vin_check_digit": {
+      "n": 100000,
+      "seconds": 0.077,
+      "per_item_us": 0.77
+    },
+    "dtc_extraction": {
+      "n": 100000,
+      "seconds": 0.096,
+      "per_item_us": 0.96
+    },
+    "bloom_filter": {
+      "capacity": 2000000,
+      "inserted": 1000000,
+      "bytes": 2396265,
+      "hashes": 7,
+      "insert_seconds": 1.256,
+      "measured_false_positive_rate": 0.0003,
+      "theory_at_this_fill": 0.00025
+    },
+    "replay_window_scalar": {
+      "events": 1000000,
+      "vehicles": 100000,
+      "seconds": 0.31,
+      "per_event_us": 0.31
+    },
+    "replay_window_vectorised": {
+      "events": 1000000,
+      "batch": 5000,
+      "seconds": 0.097,
+      "per_event_us": 0.097
+    },
+    "count_min_topk": {
+      "events": 500000,
+      "distinct": 26063,
+      "width": 2719,
+      "depth": 5,
+      "seconds": 0.668,
+      "top10_recall": 1.0,
+      "max_overcount": 30
+    },
+    "geohash": {
+      "vectorised_points": 1000000,
+      "vectorised_seconds": 0.052,
+      "scalar_points": 50000,
+      "scalar_seconds": 0.095
+    },
+    "latency_histogram": {
+      "samples": 1000000,
+      "seconds": 0.0073,
+      "buckets": 214,
+      "p99_estimate": 1637.2,
+      "p99_exact": 1517.2
+    },
+    "sliding_window": {
+      "updates": 300000,
+      "seconds": 0.052
+    },
+    "trip_segmentation_3600": {
+      "points": 3600,
+      "seconds": 0.0083,
+      "dp_segments": 3,
+      "threshold_segments": 49
+    },
+    "trip_segmentation_86400": {
+      "points": 86400,
+      "seconds": 0.1767,
+      "dp_segments": 3,
+      "threshold_segments": 1299
+    },
+    "hungarian_15x20": {
+      "seconds": 7e-05
+    },
+    "hungarian_60x65": {
+      "seconds": 0.00084
+    },
+    "hungarian_200x205": {
+      "seconds": 0.024
+    },
+    "union_find_shape_clustering": {
+      "signatures": 120,
+      "distinct": 60,
+      "true_formats": 6,
+      "families_found": 6,
+      "seconds": 0.0008
+    }
+  }
+}

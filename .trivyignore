@@ -1,0 +1,6 @@
+# Trivy findings reviewed and accepted. See docs/evidence/security/README.md.
+
+# KSV-0109 / KSV-01010: false positive. The rule matches "PASS" in the key
+# ROSETTA_GOLDEN_PASS_RATE (a number, 0.99). Secrets live in a Kubernetes Secret.
+KSV-0109
+KSV-01010

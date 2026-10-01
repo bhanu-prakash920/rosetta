@@ -1,0 +1,14 @@
+# Grafana loads every JSON file in the folder below as a dashboard.
+apiVersion: 1
+
+providers:
+  - name: rosetta
+    orgId: 1
+    folder: Rosetta
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

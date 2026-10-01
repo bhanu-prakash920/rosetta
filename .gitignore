@@ -1,0 +1,32 @@
+# runtime data and caches
+data/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+coverage.xml
+
+# web
+web/node_modules/
+web/dist/
+
+# secrets: never commit real ones
+.env
+*.pem
+*.key
+
+# reference material supplied for the design, not part of the product
+design/
+
+# infrastructure state
+infra/terraform/**/.terraform/
+infra/terraform/**/*.tfstate*
+.DS_Store
+
+# organiser material, not ours to redistribute
+Motorq_Hackathon_Problem_Statement.pdf
+Motorq_Hackathon_Solution_Document_Template.docx

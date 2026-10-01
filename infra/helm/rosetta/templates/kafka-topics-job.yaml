@@ -1,0 +1,70 @@
+{{- if .Values.kafka.topicInit.enabled }}
+{{- /*
+Creates the topics with the replication factor of a production cluster, before
+any Rosetta process starts. The application creates missing topics itself, but
+with replication factor 1. It leaves existing topics alone.
+*/ -}}
+{{- $t := .Values.kafka.topicInit }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "rosetta.fullname" . }}-kafka-topics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rosetta.labels" . | nindent 4 }}
+    app.kubernetes.io/component: kafka-topics
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ $t.backoffLimit }}
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        {{- include "rosetta.labels" . | nindent 8 }}
+        app.kubernetes.io/component: kafka-topics
+    spec:
+      restartPolicy: Never
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: kafka-topics
+          image: {{ printf "%s:%s" $t.image.repository $t.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              create() {
+                name="$1"; partitions="$2"; shift 2
+                /opt/kafka/bin/kafka-topics.sh --bootstrap-server "$BOOTSTRAP" \
+                  --create --if-not-exists --topic "$name" --partitions "$partitions" \
+                  --replication-factor {{ $t.replicationFactor }} \
+                  --config min.insync.replicas={{ $t.minInSyncReplicas }} "$@"
+              }
+              {{- range $t.topics }}
+              create {{ .name }} {{ .partitions }}{{ range .config }} --config {{ . }}{{ end }}
+              {{- end }}
+              /opt/kafka/bin/kafka-topics.sh --bootstrap-server "$BOOTSTRAP" --list
+          env:
+            - name: BOOTSTRAP
+              value: {{ .Values.config.ROSETTA_KAFKA_BOOTSTRAP | quote }}
+            # the root file system is read-only: logs of the tool go to /tmp
+            - name: LOG_DIR
+              value: /tmp/kafka-logs
+          resources:
+            {{- toYaml $t.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 128Mi
+{{- end }}

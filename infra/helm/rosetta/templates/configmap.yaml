@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rosetta.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rosetta.labels" . | nindent 4 }}
+data:
+  {{- include "rosetta.configData" . | trim | nindent 2 }}

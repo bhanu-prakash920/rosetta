@@ -1,0 +1,24 @@
+Rosetta {{ .Chart.AppVersion }} is installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Components
+  kubectl -n {{ .Release.Namespace }} get deploy,hpa,pdb -l app.kubernetes.io/instance={{ .Release.Name }}
+
+{{- if .Values.ingress.enabled }}
+
+Address
+{{- range .Values.ingress.hosts }}
+  https://{{ .host }}
+{{- end }}
+{{- else }}
+
+Reach the API from your machine
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "rosetta.fullname" . }}-api 8080:{{ .Values.service.port }}
+  open http://localhost:8080
+{{- end }}
+
+Health
+  GET /api/v1/system/health    database, broker, number of workers that report
+  GET /metrics                 Prometheus
+
+Secrets are read from the Secret "{{ .Values.secret.existingSecret }}", which this chart does not create.
+Kafka, PostgreSQL, Redis, object storage and the MQTT broker are external: see values.yaml.
