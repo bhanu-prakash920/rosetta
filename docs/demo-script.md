@@ -1,7 +1,14 @@
 # Demo video script (about 9 minutes)
 
 Target length 9:00, which leaves a minute of slack under the 10-minute limit.
-Speak slowly: the spoken lines below come to about 1,150 words, roughly 130 a minute.
+
+The spoken lines come to about 1,070 words. Spread over nine minutes that is roughly
+120 a minute, which is an unhurried pace, and the rest of the time is clicking and
+waiting. So you can take the pauses: they are built into the budget.
+
+The lines are written to be said, not read. Short sentences, one idea each, and a
+blank line wherever it is natural to breathe. Say them in your own words if that comes
+out easier; nothing here needs to be quoted exactly.
 
 ## Before you record
 
@@ -38,60 +45,73 @@ Format: **[time] Screen → what to click.** Then *what to say*.
 
 **[0:00] Landing page, top.**
 
-> "Hi, I'm Bhanu Prakash Kusha, and this is Rosetta.
-> Connected cars send data all the time: speed, location, battery, fault codes.
-> The problem is that every car maker sends it in its own format."
+> "Hi, I'm Bhanu Prakash Kusha. This is Rosetta.
+>
+> Connected cars send data all the time. Speed, location, battery, fault codes.
+>
+> The problem? Every car maker sends it in a different format."
 
 **[0:15] Scroll to "the same moment, written six ways".**
 
-> "Here is one moment: a car braking hard at 64 kilometres an hour.
-> Six makers describe it six different ways. Different field names, different units,
-> one even in binary Protobuf, one with German field names.
-> Today, every new maker, or every firmware update that renames a field, means
-> writing new code, a release, and losing data while it ships."
+> "Here's one single moment. A car brakes hard, at 64 kilometres an hour.
+>
+> Six makers describe it six different ways.
+> Different names. Different units. One sends binary. One writes in German.
+>
+> So today, a new maker means new code. A firmware update means new code.
+> And while that code ships, you lose data."
 
 ### Part 2: Our solution in one line (0:45 to 1:15)
 
 **[0:45] Scroll to "one event, whatever the source", then to Park, Study, Prove, Approve, Replay.**
 
-> "Rosetta translates every format into one standard event.
-> And when a maker it has never seen starts sending, it doesn't crash or drop data.
-> It **parks** the messages, an AI agent **studies** them, **proves** its mapping on
-> known answers, a human **approves** it, and the parked messages are **replayed**.
-> No new code, no restart, no lost data. Let me show you live."
+> "Rosetta turns every format into one standard event.
+>
+> And when a maker it has never seen starts sending, nothing breaks.
+> It **parks** the messages. An AI agent **studies** them.
+> It **proves** the mapping on known answers. A person **approves** it.
+> Then the parked messages are **replayed**.
+>
+> No new code. No restart. Nothing lost.
+> Let me show you."
 
 ### Part 3: The live pipeline (1:15 to 2:00)
 
 **[1:15] Click "Sign in" (engineer) → Live page.**
 
-> "This is a live system on one laptop. 100,000 simulated vehicles, about
-> 100,000 events every second, from five makers."
+> "This is running live, on one laptop.
+> A hundred thousand simulated vehicles. About a hundred thousand events a second.
+> Five different makers."
 
 **Point at "Ingest to dashboard".**
 
-> "This is the time from a message arriving to it showing on the dashboard.
-> The target was under 2 seconds. We're at around a quarter of a second."
+> "This is how long a message takes to reach the dashboard.
+> The target was two seconds. We're at about a quarter of a second."
 
 **Point at "Duplicates dropped" and "Throughput by source".**
 
-> "We inject problems on purpose: duplicate messages, messages out of order,
-> damaged messages. Duplicates are caught and dropped, so nothing is counted twice."
+> "And I break things on purpose.
+> Duplicates. Messages out of order. Damaged messages.
+> You can watch the duplicates get caught and dropped. Nothing is counted twice."
 
 ### Part 4: A new car maker appears (2:00 to 2:45)
 
 **[2:00] Under "Make something happen", click "A new maker starts sending".**
 
-> "Now a new maker, Helix Mobility, starts sending data. Rosetta has never seen its format."
+> "Now watch this. A new maker, Helix Mobility, starts sending.
+> Rosetta has never seen this format before."
 
 **Wait until the "What needs attention" card shows Helix, "parked, no mapping".**
 
-> "Look: nothing is dropped. Every unreadable message is parked, with a reason:
-> no adapter."
+> "And look. Nothing is dropped.
+> Every message it can't read is parked, with a reason. No adapter."
 
 **[2:20] Click "Dead letters" in the menu. Open the Helix group and a sample payload.**
 
-> "These are the parked messages, grouped by format. Here's one.
-> German field names like `fahrt.v`, and nothing here knows what any of them mean yet."
+> "Here are the parked messages, grouped by format. Let's open one.
+>
+> The field names are in German. `fahrt.v`.
+> Right now, nothing in the system knows what that means."
 
 ### Part 5: The AI agent learns the format (2:45 to 4:30)
 
@@ -99,69 +119,88 @@ This is the most important part. Take your time.
 
 **[2:45] Click "Ask the agent for a mapping" (or Mapping studio → Helix).**
 
-> "This is the Mapping Studio. Here's the clever part."
+> "This is the Mapping Studio. And this is the interesting part."
 
 **Point at the engine toggle: Auto / Deterministic / Model.**
 
-> "The agent has a fixed set of seven tools. There are two ways to drive them.
-> **Deterministic** runs them in a fixed order, no AI, same result every time.
-> **Model** lets a language model, like Gemini or Claude, decide which tool to use next
-> and explain its reasoning. Auto uses a model when an API key is set."
+> "The agent has seven tools. And there are two ways to drive them.
+>
+> **Deterministic** runs them in a fixed order. No AI. Same answer every time.
+>
+> **Model** lets a language model decide what to do next, and explain why.
+> Gemini, Claude, whichever key you give it."
 
 **Select your engine, click "Run the agent". While it runs:**
 
-> "It can't write code, and it can't approve its own work. It can only propose."
+> "And one thing matters here.
+> It can't write code. It can't approve its own work. It can only suggest."
 
 **[3:20] When it finishes, walk down the steps. Open "Profile every field".**
 
-> "Step one, collect the parked messages. Step two, profile every field.
-> And here's my favourite part. It uses **physics**.
-> It works out latitude and longitude from how the car moves.
-> And it notices `fahrt.v` is always 0.278 times the GPS speed.
-> 0.278 is the conversion from kilometres an hour to metres per second.
-> So this is speed, in metres per second, whatever the field is called."
+> "Step one, it collects the parked messages. Step two, it profiles every field.
+>
+> And this is my favourite part. It uses **physics**.
+> It finds latitude and longitude just from how the car moves.
+>
+> Then it notices something. This field, `fahrt.v`, is always the GPS speed
+> times zero point two seven eight.
+> And that number is exactly how you convert kilometres an hour into metres per second.
+>
+> So this field is speed. In metres per second.
+> It doesn't matter what it's called."
 
 **[3:50] Point at "Propose a mapping".**
 
-> "Then a machine-learning classifier proposes a match for every field,
-> and the Hungarian algorithm makes sure no two fields claim the same slot."
+> "Next, a machine-learning model suggests a match for every field.
+> And the Hungarian algorithm makes sure no two fields claim the same slot."
 
 **[4:00] Point at "Test on known answers" and "Submit for review".**
 
-> "Then it tests itself on a golden set: messages where the right answer is already known.
-> The trick: half of those answers are hidden from the agent. So it can't just memorise them.
-> It passes all of them, including the half it never saw.
-> And every single step, input and output, is recorded in the audit log."
+> "Then it tests itself.
+> I keep a set of messages where the right answer is already known.
+>
+> And here's the trick. Half of those are hidden from the agent.
+> So it can't memorise them. It has to actually get them right.
+>
+> It passes all of them. Including the half it never saw.
+> And every step is written to the audit log. Input and output."
 
 ### Part 6: A human approves, zero downtime (4:30 to 5:15)
 
 **[4:30] Scroll down to the draft version, click "Try on parked traffic".**
 
-> "Before anyone approves, it can be dry-run on the real parked messages.
-> Nothing is written. It just shows what would happen."
+> "Before anyone approves it, I can try it on the real parked messages.
+> Nothing gets written. It just shows what would happen."
 
 **[4:45] Click "Approve", type a reason, confirm.**
 
-> "Only a person can approve. If the agent tries, the registry itself refuses."
+> "Only a person can approve this. If the agent tries, the system refuses it."
 
 **[4:55] Go to Live.**
 
-> "Within a second, the workers load the new mapping between two batches.
-> Helix appears in the chart, the parked messages are replayed, and the dead-letter
-> count falls. No process restarted. That's zero downtime onboarding."
+> "Within a second, the workers pick up the new mapping.
+>
+> Helix appears in the chart. The parked messages replay. The parked count drops.
+>
+> And nothing restarted. That's a new car maker onboarded, with zero downtime."
 
 ### Part 7: Firmware update and safe rollout (5:15 to 6:00)
 
 **[5:15] Live → click "Firmware update".**
 
-> "Now a harder case. 35 percent of Pacifica cars get a firmware update that renames
-> fields and switches units. Only some of the fleet changes."
+> "Now a harder one. Pacifica pushes a firmware update.
+> It renames fields and changes the units. But only on 35 percent of the cars.
+>
+> So the same maker is now sending two different formats at once."
 
 **Click "Review the new format", run the agent again, approve. Open the Pacifica Sources page.**
 
-> "The agent proposes version 2. When I approve it, it doesn't go to everyone.
-> It's released as a **canary**, to a share of vehicles, while version 1 keeps serving the rest.
-> If it's good, I promote it. If not, one click rolls it back."
+> "The agent proposes version two. And when I approve it, it doesn't go to everyone.
+>
+> It goes out as a **canary**, to a small share of cars.
+> Version one keeps serving the rest. Both run side by side.
+>
+> If it looks good, I promote it. If not, one click rolls it back."
 
 *(If you are short on time, skip running the agent here: start the scenario, show the
 drift appear on Live, and just explain the canary with the Sources page.)*
@@ -170,68 +209,87 @@ drift appear on Live, and just explain the canary with the Sources page.)*
 
 **[6:00] Live → "Processes" card. Hover a normaliser, kill it.**
 
-> "What if a server crashes? I'll kill a worker, the way a machine dies.
-> The queue grows. The supervisor restarts it from its last checkpoint. The queue drains."
+> "So what happens when a server dies? Let's find out.
+>
+> I'll kill a worker outright, the way a real machine fails.
+> The queue grows. The supervisor restarts it from its last checkpoint.
+> And the queue drains."
 
 **[6:20] Show `docs/diagrams/bench_burst.png`.**
 
-> "We tested this properly. We killed four processes under full load: zero events lost,
-> zero stored twice. And in a traffic burst, the backlog grew to 1.4 million messages
-> and drained in 25 seconds, with nothing lost."
+> "And I tested this properly.
+> I killed four processes under full load. Nothing was lost. Nothing was stored twice.
+>
+> And in a traffic burst, the backlog grew to one point four million messages.
+> It drained in 25 seconds. Still nothing lost."
 
 ### Part 9: Fleet, privacy and audit (6:45 to 7:40)
 
 **[6:45] Click "Fleet". Click a vehicle with an alert.**
 
-> "This is what a fleet operator sees: every vehicle on the map, in one format,
-> whatever its maker. Alerts like harsh braking, low battery and new fault codes are
-> raised automatically."
+> "This is what a fleet operator sees.
+> Every vehicle on one map, in one format, no matter which maker it came from.
+>
+> And alerts are raised automatically. Harsh braking. Low battery. New fault codes."
 
 **[7:00] Switch to Window B (analyst) → Fleet.**
 
-> "Same page, as an analyst. Locations are blurred to about 5 kilometres,
-> and VINs are shortened. Different roles see different data."
+> "Now the same page, as an analyst.
+> The locations are blurred to about five kilometres. The vehicle numbers are shortened.
+>
+> Same data. Different role. Different view."
 
 **[7:15] Window A → "Compliance". Filter the entries to Agent.**
 
-> "Every read of fleet data and every agent action is logged here, in a hash chain:
-> each entry carries the fingerprint of the one before it. If anyone edits a row,
-> the chain breaks at that row, so tampering shows."
+> "Every read of fleet data, and every agent action, is logged here.
+>
+> And it's a hash chain. Each entry carries the fingerprint of the one before it.
+> So if anyone edits a row, the chain breaks right there.
+> Tampering shows up."
 
 ### Part 10: Results (7:40 to 8:35)
 
 **[7:40] Click "Insights" → "The field-mapping model, against a baseline".**
 
-> "How good is the AI? On formats with names it has never seen, the model maps
-> **99.1 percent** of fields correctly. Simple name matching gets **35.8 percent**."
+> "So how good is the AI, really?
+>
+> On formats it has never seen before, it maps **99.1 percent** of the fields correctly.
+> Plain name matching gets **35.8 percent**."
 
 **[7:55] Show the README Results table.**
 
-> "And the numbers, all measured, each with its evidence file in the repo:
-> - **100,000 events a second**, sustained.
-> - **Under 400 milliseconds** to the dashboard, even at the 99th percentile.
-> - **Zero events lost** out of over 10 million.
-> - A 10-minute soak test: 31 million events, no restarts.
-> - Over **2,700 automated tests**, 93 percent code coverage, all green in CI.
-> - Security scans, including OWASP ZAP against the running API, pass."
+> "And every number here is measured. Each one has its evidence file in the repo.
+>
+> A hundred thousand events a second, sustained.
+> Under 400 milliseconds to the dashboard, even at the 99th percentile.
+> Zero events lost, out of more than ten million.
+> A ten-minute soak test: 31 million events, no restarts.
+> Over 2,700 automated tests, 93 percent coverage, all green in CI.
+> And the security scans pass, including OWASP ZAP against the running API."
 
 **[8:20] Show the architecture diagram (`docs/diagrams/c4_containers.png`).**
 
-> "Under the hood: MQTT for the cars, Kafka as the message queue, Python services
-> for translation, Redis, PostgreSQL and Parquet for storage, a React dashboard,
-> and Prometheus and Grafana for monitoring. It runs in Docker, with
-> Kubernetes and AWS deployment files."
+> "And quickly, under the hood.
+>
+> MQTT from the cars. Kafka as the queue. Python services doing the translation.
+> Redis, PostgreSQL and Parquet for storage. A React dashboard.
+> Prometheus and Grafana for monitoring.
+>
+> It all runs in Docker, and the Kubernetes and AWS files are in the repo."
 
 ### Part 11: Close (8:35 to 9:00)
 
 **[8:35] Back to the landing page, or a closing slide with your name.**
 
-> "To be honest about limits: everything here is simulated data on one laptop,
-> and real car feeds would be messier. That's exactly why every mapping has to pass
-> the golden set and a human.
+> "Let me be honest about the limits.
+> This is simulated data, on one laptop. Real car feeds would be messier than this.
+> And that is exactly why every mapping has to pass the golden set, and a person.
 >
-> So that's Rosetta: one event from every car maker, and a new maker joins in minutes,
-> without code, without downtime and without losing data. Thank you."
+> So, that's Rosetta.
+> One event from every car maker.
+> And a new maker joins in minutes. No code, no downtime, nothing lost.
+>
+> Thank you."
 
 ---
 
@@ -253,7 +311,7 @@ drift appear on Live, and just explain the canary with the Sources page.)*
 | Soak: 30.9 M events in 10 min, 0 restarts | `docs/evidence/bench_soak.json` |
 | 4 processes SIGKILLed, 0 lost, 0 stored twice | `docs/evidence/chaos.json` |
 | 99.1% vs 35.8% field mapping | `docs/evidence/ml_field_mapper.json` |
-| 2,764 tests, 93.4% coverage | `docs/evidence/coverage.json` |
+| 2,768 tests, 93.5% coverage | `docs/evidence/coverage.json` |
 
 If you change any code before recording, regenerate these first, because the
 numbers in the README are typed in by hand and can go stale.
