@@ -1,0 +1,503 @@
+# Rosetta, production mode, on one machine.
+#
+#   cp .env.example .env      # then replace the placeholders, see the comments in that file
+#   docker compose up --build
+#
+# What starts, in this order:
+#
+#   kafka, postgres, redis, minio, emqx        infrastructure
+#   minio-init                                 creates the bucket
+#   migrate -> db-extras -> seed               schema, then hypertable and vector column, then data
+#   api, gateway, normalizer x2, processor,    Rosetta
+#   dlq, simulator
+#   prometheus, loki + alloy, tempo, grafana   metrics, logs, traces
+#
+# Open on the host, all bound to 127.0.0.1:
+#   http://localhost:8080   Rosetta (UI and API)      API docs at /api/docs
+#   http://localhost:3000   Grafana
+#   http://localhost:9090   Prometheus
+#   http://localhost:9001   MinIO console
+# Nothing else is published. Kafka, PostgreSQL, Redis and MQTT are reachable only
+# from inside the Compose network.
+#
+# No secret lives in this file. Every credential is read from .env, and Compose
+# refuses to start when one is missing.
+#
+# MQTT with client certificates (mTLS) is an overlay, because it needs
+# certificates that must not be in the repository:
+#   make certs
+#   docker compose -f docker-compose.yml -f infra/emqx/docker-compose.mtls.yml up --build
+
+name: rosetta
+
+x-rosetta-env: &rosetta-env
+  ROSETTA_ENV: production
+  ROSETTA_LOG_LEVEL: ${ROSETTA_LOG_LEVEL:-INFO}
+  ROSETTA_DATA_DIR: /var/lib/rosetta
+  ROSETTA_VEHICLES: ${ROSETTA_VEHICLES:-100000}
+  # adapters: this block is the whole difference between local and production mode
+  ROSETTA_BROKER: kafka
+  ROSETTA_KAFKA_BOOTSTRAP: kafka:9092
+  ROSETTA_DATABASE_URL: postgresql+psycopg2://rosetta:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/rosetta
+  ROSETTA_TELEMETRY_STORE: timescale
+  ROSETTA_STATE_STORE: redis
+  ROSETTA_REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}@redis:6379/0
+  ROSETTA_ARCHIVE: s3
+  ROSETTA_S3_ENDPOINT: http://minio:9000
+  ROSETTA_S3_BUCKET: rosetta-telemetry
+  ROSETTA_S3_ACCESS_KEY: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
+  ROSETTA_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+  ROSETTA_MQTT_URL: mqtt://emqx:1883
+  # read by the AWS SDK inside pyarrow: a fixed region, and no instance-metadata lookups
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_EC2_METADATA_DISABLED: "true"
+  # traces: one batch in 200 is followed from the gateway to the processor, in Tempo
+  ROSETTA_METRICS_TOKEN: ${ROSETTA_METRICS_TOKEN:?set ROSETTA_METRICS_TOKEN in .env}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
+  # Tempo takes traces only. Metrics go through Prometheus, logs through Loki.
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  ROSETTA_TRACE_RATIO: ${ROSETTA_TRACE_RATIO:-0.005}
+
+x-rosetta-service: &rosetta-service
+  image: rosetta:${ROSETTA_IMAGE_TAG:-1.0.0}
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+x-rosetta-job: &rosetta-job
+  image: rosetta:${ROSETTA_IMAGE_TAG:-1.0.0}
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: "no"
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  healthcheck:
+    disable: true
+
+services:
+  # ------------------------------------------------------------ infrastructure
+  kafka:
+    image: apache/kafka:3.9.1
+    restart: unless-stopped
+    environment:
+      # KRaft: this node is broker and controller, there is no ZooKeeper
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      # one broker: internal topics cannot be replicated
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # topics are created by the application (rosetta/adapters/kafka_broker.py)
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      # Sized for a laptop. The limit is per partition and there are 78 partitions,
+      # so the default of 32 MB caps Kafka at about 2.5 GB of disk.
+      KAFKA_LOG_RETENTION_BYTES: ${KAFKA_RETENTION_BYTES:-33554432}
+      KAFKA_LOG_SEGMENT_BYTES: 8388608
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 60000
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  postgres:
+    # PostgreSQL 16 with TimescaleDB 2.30 and pgvector
+    image: timescale/timescaledb-ha:pg16.15-ts2.30.1
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rosetta
+      POSTGRES_DB: rosetta
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    shm_size: 256mb
+    volumes:
+      - postgres-data:/home/postgres/pgdata
+    healthcheck:
+      # over TCP: during first-time initialisation the image runs a temporary
+      # server on the Unix socket only, and a socket check would pass too early
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U rosetta -d rosetta"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  redis:
+    image: redis:7.4.11-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    # The password is read from the environment inside the container, so it does
+    # not appear in the process list of the host. noeviction: the hot state must
+    # never be evicted to make room for something else.
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes --maxmemory-policy noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    # The official minio/minio image is no longer published (checked on
+    # 2026-09-30: Docker Hub answers 404, Quay refuses anonymous pulls). This is
+    # a community-maintained fork of the same server. MINIO_IMAGE in .env
+    # replaces it with any S3-compatible MinIO build you trust.
+    image: ${MINIO_IMAGE:-pgsty/minio:RELEASE.2026-08-04T00-00-00Z}
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio-data:/data
+    # No health check on purpose: it would depend on tools inside an image this
+    # project does not control. minio-init waits for the store and proves it is
+    # writable, and the services wait for minio-init.
+
+  minio-init:
+    <<: *rosetta-job
+    command: ["python", "/opt/rosetta/create_bucket.py"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: minio-init
+    volumes:
+      - ./infra/minio/create_bucket.py:/opt/rosetta/create_bucket.py:ro
+    depends_on:
+      minio:
+        condition: service_started
+
+  emqx:
+    image: emqx/emqx:5.8.9
+    restart: unless-stopped
+    environment:
+      EMQX_NODE__NAME: emqx@emqx.rosetta.internal
+      EMQX_NODE__COOKIE: ${EMQX_NODE_COOKIE:?set EMQX_NODE_COOKIE in .env}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${EMQX_DASHBOARD_PASSWORD:?set EMQX_DASHBOARD_PASSWORD in .env}
+      # Messages the broker holds for a gateway that is restarting: about 40 s of
+      # the 5,000 events/s the Compose simulator sends. The default, 1,000, lasts
+      # a fifth of a second, and anything above it is dropped.
+      EMQX_MQTT__MAX_MQUEUE_LEN: "200000"
+      # The gateway acknowledges a batch once it is in Kafka, every 50 ms or so. With
+      # the default window of 32 unacknowledged messages that caps it near 640/s.
+      EMQX_MQTT__MAX_INFLIGHT: "4096"
+      # A session holds its queue in its own process. 200,000 queued messages need
+      # more than the default heap limit, which would kill the session.
+      EMQX_FORCE_SHUTDOWN__MAX_HEAP_SIZE: "512MB"
+      # The gateway reads in bursts (it waits for Kafka before acknowledging), so
+      # deliveries pile up in its connection's mailbox meanwhile. At the default
+      # limit, 1,000, the broker closes the connection and the session restarts.
+      EMQX_FORCE_SHUTDOWN__MAX_MAILBOX_SIZE: "100000"
+    networks:
+      default:
+        aliases:
+          - emqx.rosetta.internal
+    volumes:
+      - emqx-data:/opt/emqx/data
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  # ------------------------------------------------------ schema, extras, data
+  migrate:
+    <<: *rosetta-job
+    command: ["migrate"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  db-extras:
+    image: timescale/timescaledb-ha:pg16.15-ts2.30.1
+    restart: "no"
+    entrypoint: ["psql"]
+    command: ["-v", "ON_ERROR_STOP=1", "-f", "/sql/postgres_extras.sql"]
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: rosetta
+      PGDATABASE: rosetta
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./infra/sql/postgres_extras.sql:/sql/postgres_extras.sql:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  seed:
+    <<: *rosetta-job
+    command: ["seed"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: seed
+      ROSETTA_DEMO_PASSWORD: ${ROSETTA_DEMO_PASSWORD:?set ROSETTA_DEMO_PASSWORD in .env}
+    depends_on:
+      db-extras:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ------------------------------------------------------------------- Rosetta
+  api:
+    <<: *rosetta-service
+    command: ["api"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: api
+      # names the HTTP request spans the web framework records through OpenTelemetry
+      OTEL_SERVICE_NAME: rosetta-api
+      ROSETTA_WEB_DIST: /app/web/dist
+      ROSETTA_JWT_SECRET: ${ROSETTA_JWT_SECRET:?set ROSETTA_JWT_SECRET in .env}
+      ROSETTA_CORS_ORIGINS: http://localhost:${API_PORT:-8080},http://127.0.0.1:${API_PORT:-8080}
+      ROSETTA_LLM_PROVIDER: ${ROSETTA_LLM_PROVIDER:-auto}
+      ROSETTA_LLM_MODEL: ${ROSETTA_LLM_MODEL:-}
+      # optional: without a key the agent runs its deterministic workflow. Set the
+      # one matching your provider; the agent uses whichever is present.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8000"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    <<: *rosetta-service
+    command: ["gateway"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: gateway
+      # Stable across restarts: a restarted gateway takes its MQTT session back,
+      # with the messages the broker queued for it meanwhile. A second replica
+      # needs its own id (gateway-1), for example as a second service.
+      ROSETTA_MQTT_CLIENT_ID: gateway-0
+    depends_on:
+      kafka:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+
+  normalizer:
+    <<: *rosetta-service
+    command: ["normalizer"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: normalizer
+    deploy:
+      replicas: ${NORMALIZER_REPLICAS:-2}
+    volumes:
+      # de-duplication checkpoints, one file per replica
+      - normalizer-data:/var/lib/rosetta
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  processor:
+    <<: *rosetta-service
+    command: ["processor"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: processor
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  dlq:
+    <<: *rosetta-service
+    command: ["dlq"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: dlq
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  simulator:
+    <<: *rosetta-service
+    command: ["simulator", "0", "1"]
+    environment:
+      <<: *rosetta-env
+      ROSETTA_SERVICE: simulator
+      # publish through EMQX like a fleet of devices would
+      SIM_TRANSPORT: mqtt
+      # events per second, 0 removes the cap
+      SIM_MAX_EPS: ${SIM_MAX_EPS:-5000}
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      gateway:
+        condition: service_healthy
+      emqx:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  # ------------------------------------------------------------- observability
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    secrets:
+      - metrics_token
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # Logs: Alloy reads the stdout of every container of this project from the
+  # Docker socket and ships it to Loki. Read-only socket, but the socket is still
+  # powerful: in Kubernetes the Alloy DaemonSet reads /var/log/pods instead.
+  loki:
+    image: grafana/loki:3.5.3
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./infra/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3100/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  alloy:
+    image: grafana/alloy:v1.10.2
+    restart: unless-stopped
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./infra/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  # Traces: the Rosetta services send spans over OTLP/HTTP.
+  tempo:
+    image: grafana/tempo:2.8.2
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    user: "0:0"   # the named volume is created owned by root
+    volumes:
+      - ./infra/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+
+  grafana:
+    image: grafana/grafana:12.4.12
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/rosetta-pipeline.json
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+      tempo:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+secrets:
+  metrics_token:
+    environment: ROSETTA_METRICS_TOKEN
+
+volumes:
+  kafka-data:
+  postgres-data:
+  redis-data:
+  minio-data:
+  emqx-data:
+  normalizer-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  tempo-data:

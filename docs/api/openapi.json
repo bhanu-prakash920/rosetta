@@ -1,0 +1,2913 @@
+{
+  "components": {
+    "schemas": {
+      "ActionBody": {
+        "additionalProperties": false,
+        "properties": {
+          "canary_pct": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canary Pct"
+          },
+          "comment": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Comment",
+            "type": "string"
+          },
+          "replay": {
+            "default": true,
+            "title": "Replay",
+            "type": "boolean"
+          }
+        },
+        "title": "ActionBody",
+        "type": "object"
+      },
+      "Body_token_api_v1_auth_token_post": {
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          },
+          "grant_type": {
+            "anyOf": [
+              {
+                "pattern": "^password$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "password": {
+            "format": "password",
+            "title": "Password",
+            "type": "string"
+          },
+          "scope": {
+            "default": "",
+            "title": "Scope",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_token_api_v1_auth_token_post",
+        "type": "object"
+      },
+      "ErasureBody": {
+        "additionalProperties": false,
+        "properties": {
+          "driver_id": {
+            "minimum": 1.0,
+            "title": "Driver Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "driver_id"
+        ],
+        "title": "ErasureBody",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "KillBody": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 40,
+            "pattern": "^[a-z]+-\\d+$",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "KillBody",
+        "type": "object"
+      },
+      "PreviewBody": {
+        "additionalProperties": false,
+        "properties": {
+          "payload": {
+            "anyOf": [
+              {
+                "maxLength": 131072,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "payload_b64": {
+            "anyOf": [
+              {
+                "maxLength": 131072,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload B64"
+          }
+        },
+        "title": "PreviewBody",
+        "type": "object"
+      },
+      "ReplayBody": {
+        "additionalProperties": false,
+        "properties": {
+          "oem": {
+            "maxLength": 32,
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Oem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "oem"
+        ],
+        "title": "ReplayBody",
+        "type": "object"
+      },
+      "RunBody": {
+        "additionalProperties": false,
+        "properties": {
+          "engine": {
+            "default": "auto",
+            "pattern": "^(auto|workflow|model|anthropic|google)$",
+            "title": "Engine",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "oem": {
+            "maxLength": 32,
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Oem",
+            "type": "string"
+          }
+        },
+        "required": [
+          "oem"
+        ],
+        "title": "RunBody",
+        "type": "object"
+      },
+      "ShadowBody": {
+        "additionalProperties": false,
+        "properties": {
+          "max_records": {
+            "default": 20000,
+            "maximum": 200000.0,
+            "minimum": 100.0,
+            "title": "Max Records",
+            "type": "integer"
+          }
+        },
+        "title": "ShadowBody",
+        "type": "object"
+      },
+      "SimPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "burst": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burst"
+          },
+          "drift_pct": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drift Pct"
+          },
+          "dup_pct": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dup Pct"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 6,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "hz": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.1,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hz"
+          },
+          "malformed_pct": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Malformed Pct"
+          },
+          "max_eps": {
+            "anyOf": [
+              {
+                "maximum": 2000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Eps"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "pattern": "^(realistic|all)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "outage_pct": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outage Pct"
+          },
+          "paused": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused"
+          },
+          "reorder_pct": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reorder Pct"
+          }
+        },
+        "title": "SimPatch",
+        "type": "object"
+      },
+      "SpecBody": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Comment",
+            "type": "string"
+          },
+          "decoder": {
+            "additionalProperties": true,
+            "title": "Decoder",
+            "type": "object"
+          },
+          "fields": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxProperties": 32,
+            "title": "Fields",
+            "type": "object"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "decoder",
+          "fields"
+        ],
+        "title": "SpecBody",
+        "type": "object"
+      },
+      "ValidateBody": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "title": "ValidateBody",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "/api/v1/auth/token"
+          }
+        },
+        "type": "oauth2"
+      }
+    }
+  },
+  "info": {
+    "description": "\nRosetta translates vehicle telemetry from many car makers into one canonical event.\n\n* **Authentication** OAuth2 bearer tokens (JWT). Get one from `POST /api/v1/auth/token`.\n* **Errors** RFC 9457 problem details (`application/problem+json`).\n* **Pagination** keyset cursors: pass `next_cursor` back as `cursor`. No offsets.\n* **Rate limits** per caller. A 429 carries `Retry-After`.\n* **Versioning** the path carries the major version. Additive changes do not bump it.\n",
+    "title": "Rosetta API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/agent/model": {
+      "get": {
+        "operationId": "model_api_v1_agent_model_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "The field-mapping model and how it scored against the baseline",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/runs": {
+      "get": {
+        "operationId": "runs_api_v1_agent_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "oem",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Oem"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Agent runs, newest first",
+        "tags": [
+          "agent"
+        ]
+      },
+      "post": {
+        "operationId": "start_api_v1_agent_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Ask the agent to work out a mapping for a source",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/agent/runs/{run_id}": {
+      "get": {
+        "operationId": "run_api_v1_agent_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "One run with every tool call it made",
+        "tags": [
+          "agent"
+        ]
+      }
+    },
+    "/api/v1/alerts": {
+      "get": {
+        "operationId": "alerts_api_v1_alerts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(info|warning|critical)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Alerts, newest first, keyset paginated",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/audit": {
+      "get": {
+        "operationId": "audit_log_api_v1_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor_kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(user|agent|service|system|anonymous)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "pattern": "^[a-z_.]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "The audit trail, newest first",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/audit/verify": {
+      "get": {
+        "operationId": "audit_verify_api_v1_audit_verify_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Recompute the hash chain and report whether it is intact",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Who the token belongs to",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/token": {
+      "post": {
+        "operationId": "token_api_v1_auth_token_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_token_api_v1_auth_token_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "OAuth2 password grant: exchange credentials for a bearer token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/batch/events": {
+      "get": {
+        "operationId": "events_api_v1_batch_events_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Driving events per source over the archive",
+        "tags": [
+          "batch analytics"
+        ]
+      }
+    },
+    "/api/v1/batch/hotspots": {
+      "get": {
+        "operationId": "hotspots_api_v1_batch_hotspots_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Geohash cells with the most harsh-driving events",
+        "tags": [
+          "batch analytics"
+        ]
+      }
+    },
+    "/api/v1/batch/quality": {
+      "get": {
+        "operationId": "quality_api_v1_batch_quality_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Data quality per source, computed over the Parquet archive",
+        "tags": [
+          "batch analytics"
+        ]
+      }
+    },
+    "/api/v1/compliance/erasure": {
+      "get": {
+        "operationId": "erasures_api_v1_compliance_erasure_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Erasures Api V1 Compliance Erasure Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Erasure requests and their evidence",
+        "tags": [
+          "compliance"
+        ]
+      },
+      "post": {
+        "operationId": "erase_api_v1_compliance_erasure_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErasureBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Erase a driver's personal data and prove it",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/compliance/policy": {
+      "get": {
+        "operationId": "policy_api_v1_compliance_policy_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "What is stored, where, for how long, and who may see it",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/dlq/groups": {
+      "get": {
+        "operationId": "groups_api_v1_dlq_groups_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "oem",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Oem"
+            }
+          },
+          {
+            "in": "query",
+            "name": "open_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Open Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Dead letters grouped by source, reason, field and payload shape",
+        "tags": [
+          "dead letters"
+        ]
+      }
+    },
+    "/api/v1/dlq/groups/{group_id}/samples": {
+      "get": {
+        "operationId": "samples_api_v1_dlq_groups__group_id__samples_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "group_id",
+            "required": true,
+            "schema": {
+              "title": "Group Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Sample payloads of one group",
+        "tags": [
+          "dead letters"
+        ]
+      }
+    },
+    "/api/v1/dlq/replay": {
+      "get": {
+        "operationId": "replay_jobs_api_v1_dlq_replay_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Replay jobs, newest first",
+        "tags": [
+          "dead letters"
+        ]
+      },
+      "post": {
+        "operationId": "replay_api_v1_dlq_replay_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Send parked messages of one source through the pipeline again",
+        "tags": [
+          "dead letters"
+        ]
+      }
+    },
+    "/api/v1/drivers": {
+      "get": {
+        "operationId": "drivers_api_v1_drivers_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Drivers of the caller's tenant (personal data)",
+        "tags": [
+          "compliance"
+        ]
+      }
+    },
+    "/api/v1/fleets": {
+      "get": {
+        "operationId": "fleets_api_v1_fleets_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Fleets the caller may see",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/history": {
+      "get": {
+        "operationId": "history_api_v1_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "oem",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Oem"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minutes",
+            "required": false,
+            "schema": {
+              "default": 60,
+              "maximum": 1440,
+              "minimum": 1,
+              "title": "Minutes",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Per-minute rollup from the metric_minute table",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/ingest/{oem}": {
+      "post": {
+        "operationId": "ingest_api_v1_ingest__oem__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-device-id",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "title": "X-Device-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "content-type",
+            "required": false,
+            "schema": {
+              "default": "application/octet-stream",
+              "maxLength": 80,
+              "title": "Content-Type",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Send raw payloads of one source, newline separated for text formats",
+        "tags": [
+          "ingest"
+        ]
+      }
+    },
+    "/api/v1/map/cells": {
+      "get": {
+        "operationId": "map_cells_api_v1_map_cells_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "precision",
+            "required": false,
+            "schema": {
+              "default": 4,
+              "maximum": 6,
+              "minimum": 2,
+              "title": "Precision",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Vehicle density per geohash cell",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/map/points": {
+      "get": {
+        "operationId": "map_points_api_v1_map_points_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "south",
+            "required": false,
+            "schema": {
+              "default": -90,
+              "maximum": 90,
+              "minimum": -90,
+              "title": "South",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "north",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "maximum": 90,
+              "minimum": -90,
+              "title": "North",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "west",
+            "required": false,
+            "schema": {
+              "default": -180,
+              "maximum": 180,
+              "minimum": -180,
+              "title": "West",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "east",
+            "required": false,
+            "schema": {
+              "default": 180,
+              "maximum": 180,
+              "minimum": -180,
+              "title": "East",
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 4000,
+              "maximum": 20000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "oem",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Oem"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Vehicle positions inside a bounding box",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/mappings": {
+      "get": {
+        "operationId": "mappings_api_v1_mappings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "oem",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Oem"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Mapping versions, newest first",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/mappings/{oem}": {
+      "post": {
+        "operationId": "create_api_v1_mappings__oem__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpecBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Create a draft mapping by hand",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/mappings/{oem}/{version}": {
+      "get": {
+        "operationId": "mapping_api_v1_mappings__oem___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "One mapping version with its fields, history and validation runs",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/mappings/{oem}/{version}/actions/{action}": {
+      "post": {
+        "operationId": "act_api_v1_mappings__oem___version__actions__action__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "title": "Action",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "approve, promote, rollback, retire or reject. Humans only",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/mappings/{oem}/{version}/diff": {
+      "get": {
+        "operationId": "diff_api_v1_mappings__oem___version__diff_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "against",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Against",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "What changed against another version",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/mappings/{oem}/{version}/preview": {
+      "post": {
+        "operationId": "preview_api_v1_mappings__oem___version__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Translate one payload with this version and show each field's source",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/mappings/{oem}/{version}/shadow": {
+      "post": {
+        "operationId": "shadow_api_v1_mappings__oem___version__shadow_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShadowBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Dry run: translate parked real traffic with this version, write nothing",
+        "tags": [
+          "dead letters"
+        ]
+      }
+    },
+    "/api/v1/mappings/{oem}/{version}/validate": {
+      "post": {
+        "operationId": "validate_api_v1_mappings__oem___version__validate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oem",
+            "required": true,
+            "schema": {
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Run the golden set against a draft",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/oems": {
+      "get": {
+        "operationId": "oems_api_v1_oems_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Every telemetry source with its live mapping and health",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/overview": {
+      "get": {
+        "operationId": "overview_api_v1_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 120,
+              "minimum": 1,
+              "title": "Window",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Live pipeline numbers: throughput, latency, lag, per-OEM health",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/schema/canonical": {
+      "get": {
+        "operationId": "schema_api_v1_schema_canonical_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "The canonical event: JSON Schema, field list, allowed transforms",
+        "tags": [
+          "registry"
+        ]
+      }
+    },
+    "/api/v1/series": {
+      "get": {
+        "operationId": "series_api_v1_series_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "oem",
+            "required": false,
+            "schema": {
+              "default": "_all",
+              "maxLength": 32,
+              "title": "Oem",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "seconds",
+            "required": false,
+            "schema": {
+              "default": 120,
+              "maximum": 300,
+              "minimum": 10,
+              "title": "Seconds",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Per-second counts for charts",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/series/all": {
+      "get": {
+        "operationId": "series_all_api_v1_series_all_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "seconds",
+            "required": false,
+            "schema": {
+              "default": 120,
+              "maximum": 300,
+              "minimum": 10,
+              "title": "Seconds",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Per-second counts for every source at once",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/simulator": {
+      "get": {
+        "operationId": "sim_get_api_v1_simulator_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Current simulator settings and scenarios",
+        "tags": [
+          "operations"
+        ]
+      },
+      "post": {
+        "operationId": "sim_patch_api_v1_simulator_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Change simulator settings",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/simulator/scenario/{name}": {
+      "post": {
+        "operationId": "sim_scenario_api_v1_simulator_scenario__name__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Run a named scenario",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/stream": {
+      "get": {
+        "operationId": "stream_api_v1_stream_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Server-sent events: the overview, once per second",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/system/chaos/kill": {
+      "post": {
+        "operationId": "chaos_kill_api_v1_system_chaos_kill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KillBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Chaos test: kill one pipeline process with SIGKILL",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/system/health": {
+      "get": {
+        "operationId": "health_api_v1_system_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness: 200 when the database and broker answer, else 503",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/system/live": {
+      "get": {
+        "operationId": "live_api_v1_system_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Liveness: 200 while the process can answer at all",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/system/workers": {
+      "get": {
+        "operationId": "workers_api_v1_system_workers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Supervised processes and their restart counts",
+        "tags": [
+          "operations"
+        ]
+      }
+    },
+    "/api/v1/vehicles": {
+      "get": {
+        "operationId": "vehicles_api_v1_vehicles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "oem",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Oem"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fleet_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fleet Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 17,
+                  "minLength": 3,
+                  "pattern": "^[A-Za-z0-9]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Vehicles, keyset paginated",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/vehicles/{vin}": {
+      "get": {
+        "operationId": "vehicle_api_v1_vehicles__vin__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vin",
+            "required": true,
+            "schema": {
+              "title": "Vin",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Latest known state of one vehicle",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/vehicles/{vin}/history": {
+      "get": {
+        "operationId": "history_api_v1_vehicles__vin__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vin",
+            "required": true,
+            "schema": {
+              "title": "Vin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 300,
+              "maximum": 2000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Recent canonical events of one vehicle, from the archive",
+        "tags": [
+          "fleet"
+        ]
+      }
+    },
+    "/api/v1/vehicles/{vin}/trips": {
+      "get": {
+        "operationId": "trips_api_v1_vehicles__vin__trips_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "vin",
+            "required": true,
+            "schema": {
+              "title": "Vin",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_stop_s",
+            "required": false,
+            "schema": {
+              "default": 90,
+              "maximum": 1800,
+              "minimum": 10,
+              "title": "Min Stop S",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Trips and stops, segmented with dynamic programming",
+        "tags": [
+          "fleet"
+        ]
+      }
+    }
+  }
+}

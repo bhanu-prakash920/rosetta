@@ -1,0 +1,582 @@
+# Rosetta Helm chart, default values.
+#
+# WHAT THIS CHART INSTALLS
+#   Deployments   api, gateway, normalizer, processor, dlq
+#   Jobs          seed (schema, PostgreSQL extras, synthetic data), kafka topics
+#   Service, Ingress, HorizontalPodAutoscaler, PodDisruptionBudget,
+#   ConfigMap, ServiceAccount, NetworkPolicy, optional ServiceMonitor
+#
+# WHAT IT DOES NOT INSTALL: EXTERNAL DEPENDENCIES
+#   Kafka, PostgreSQL (with pgvector, and TimescaleDB when
+#   ROSETTA_TELEMETRY_STORE is timescale), Redis, an S3-compatible object store
+#   and an MQTT broker are managed services. The chart only needs to know
+#   where they are:
+#
+#     dependency     non-secret setting (config, below)      secret (key in the Secret)
+#     Kafka          ROSETTA_KAFKA_BOOTSTRAP                 none, see README "Kafka security"
+#     PostgreSQL     none                                    ROSETTA_DATABASE_URL
+#     Redis          none                                    ROSETTA_REDIS_URL
+#     object store   ROSETTA_S3_ENDPOINT, ROSETTA_S3_BUCKET  ROSETTA_S3_ACCESS_KEY, ROSETTA_S3_SECRET_KEY
+#     MQTT           ROSETTA_MQTT_URL                        mqtt.tls.existingSecret (client certificate)
+#
+#   The two URLs carry a password, so the whole URL is a secret.
+#
+# THE SECRET IS REFERENCED, NOT CREATED
+#   Create it with your secret manager (External Secrets, Sealed Secrets, CSI
+#   driver) under the name given in secret.existingSecret. See README.md in
+#   this directory for the keys and for a command that creates it by hand.
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: registry.example.com/rosetta/rosetta
+  # default: the appVersion of the chart
+  tag: ""
+  # "sha256:..." pins the image and wins over the tag
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+secret:
+  # Name of an existing Secret in the release namespace. Every key of it becomes
+  # an environment variable of every Rosetta container.
+  # Required keys:  ROSETTA_DATABASE_URL, ROSETTA_REDIS_URL, ROSETTA_JWT_SECRET,
+  #                 ROSETTA_S3_ACCESS_KEY, ROSETTA_S3_SECRET_KEY
+  # Optional keys:  ROSETTA_DEMO_PASSWORD, ANTHROPIC_API_KEY,
+  #                 ROSETTA_METRICS_TOKEN (then /metrics asks for it, and the
+  #                 ServiceMonitor sends it: serviceMonitor.bearerTokenKey)
+  existingSecret: rosetta-secrets
+
+# Non-secret settings. Rendered into a ConfigMap, every key becomes an
+# environment variable. The names are the ones rosetta/config.py reads.
+config:
+  ROSETTA_ENV: production
+  ROSETTA_LOG_LEVEL: INFO
+  # must stay in step with the emptyDir mounted into every pod
+  ROSETTA_DATA_DIR: /var/lib/rosetta
+  ROSETTA_WEB_DIST: /app/web/dist
+  ROSETTA_VEHICLES: "100000"
+  # adapters
+  ROSETTA_BROKER: kafka
+  ROSETTA_KAFKA_BOOTSTRAP: "kafka-1.example.internal:9092,kafka-2.example.internal:9092,kafka-3.example.internal:9092"
+  ROSETTA_STATE_STORE: redis
+  ROSETTA_ARCHIVE: s3
+  ROSETTA_S3_ENDPOINT: "https://s3.eu-west-1.amazonaws.com"
+  ROSETTA_S3_BUCKET: rosetta-telemetry
+  # timescale needs the TimescaleDB extension. Use parquet where it is not
+  # available (Amazon RDS): the Parquet archive is then the only history.
+  ROSETTA_TELEMETRY_STORE: timescale
+  ROSETTA_MQTT_URL: "mqtts://mqtt.example.internal:8883"
+  # API
+  ROSETTA_CORS_ORIGINS: "https://rosetta.example.com"
+  ROSETTA_RATE_LIMIT_PER_MIN: "600"
+  ROSETTA_JWT_ISSUER: rosetta
+  ROSETTA_JWT_TTL_S: "3600"
+  # Set both to accept tokens from your identity provider instead of the
+  # API's own password grant.
+  ROSETTA_OIDC_JWKS_URL: ""
+  ROSETTA_OIDC_AUDIENCE: rosetta-api
+  ROSETTA_MASK_GEOHASH_PRECISION: "5"
+  # agent
+  ROSETTA_LLM_PROVIDER: auto
+  ROSETTA_GOLDEN_PASS_RATE: "0.99"
+  # tracing: add OTEL_EXPORTER_OTLP_ENDPOINT (for example the OTLP/HTTP port of
+  # Tempo or of an OpenTelemetry Collector, http://tempo.monitoring:4318) to export spans
+  ROSETTA_TRACE_RATIO: "0.005"
+  # the OTLP endpoint is for traces; metrics are scraped by Prometheus
+  OTEL_METRICS_EXPORTER: none
+  OTEL_LOGS_EXPORTER: none
+  # read by the AWS SDK inside pyarrow
+  AWS_DEFAULT_REGION: eu-west-1
+
+serviceAccount:
+  create: true
+  name: ""
+  # Workload identity goes here, for example
+  #   eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/rosetta
+  #   iam.gke.io/gcp-service-account: rosetta@project.iam.gserviceaccount.com
+  #   azure.workload.identity/client-id: 00000000-0000-0000-0000-000000000000
+  annotations: {}
+  # Rosetta never calls the Kubernetes API
+  automount: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  fsGroupChangePolicy: OnRootMismatch
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  privileged: false
+  capabilities:
+    drop:
+      - ALL
+
+# Replicas of one component are spread over nodes and zones.
+topologySpread:
+  enabled: true
+  # ScheduleAnyway prefers the spread, DoNotSchedule enforces it
+  whenUnsatisfiable: ScheduleAnyway
+  podAntiAffinity: true
+
+# Pods that read the fleet at start-up wait until the database has been seeded.
+waitForSeed:
+  enabled: true
+  timeoutSeconds: 1800
+  resources:
+    requests:
+      cpu: 50m
+      memory: 192Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+
+# ------------------------------------------------------------------ components
+# Every component has the same keys, so one template renders them all.
+
+api:
+  enabled: true
+  replicas: 2
+  args: ["api"]
+  port: 8000
+  waitForSeed: true
+  env: []
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: /metrics
+  resources:
+    requests:
+      cpu: 250m
+      memory: 768Mi
+    limits:
+      cpu: "2"
+      memory: 1536Mi
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  terminationGracePeriodSeconds: 30
+  dataSizeLimit: 256Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    behavior: {}
+  pdb:
+    enabled: true
+    minAvailable: 1
+  startupProbe:
+    httpGet:
+      path: /api/v1/system/health
+      port: http
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 60
+  # The endpoint answers 200 as long as the process serves requests.
+  livenessProbe:
+    httpGet:
+      path: /api/v1/system/health
+      port: http
+    periodSeconds: 15
+    timeoutSeconds: 3
+    failureThreshold: 3
+  # The endpoint answers 200 with status "degraded" when the database or the
+  # broker is unreachable, so readiness has to read the body.
+  readinessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "api"]
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+gateway:
+  enabled: true
+  # Keep at 1. The MQTT client id is "gateway-<pid>" and the pid is the same in
+  # every container, so two replicas would take over each other's session.
+  replicas: 1
+  args: ["gateway"]
+  port: 0
+  waitForSeed: false
+  env: []
+  podAnnotations: {}
+  resources:
+    requests:
+      cpu: 250m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+  # Recreate for the same reason: a rolling update would run two gateways at once.
+  # The MQTT session is persistent, the broker queues QoS 1 messages meanwhile.
+  strategy:
+    type: Recreate
+  terminationGracePeriodSeconds: 30
+  dataSizeLimit: 64Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 1
+    targetCPUUtilizationPercentage: 70
+    behavior: {}
+  pdb:
+    enabled: false
+    minAvailable: 1
+  startupProbe: {}
+  # The gateway has no health endpoint. This probe can only tell that the
+  # process exists. See infra/VERIFICATION.md.
+  livenessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "worker"]
+    initialDelaySeconds: 20
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "worker"]
+    initialDelaySeconds: 5
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+normalizer:
+  enabled: true
+  replicas: 2
+  args: ["normalizer"]
+  port: 0
+  waitForSeed: true
+  env: []
+  podAnnotations: {}
+  resources:
+    requests:
+      cpu: "1"
+      memory: 768Mi
+    limits:
+      cpu: "2"
+      memory: 1536Mi
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  # time to flush, write the checkpoint and commit offsets on SIGTERM
+  terminationGracePeriodSeconds: 60
+  # the de-duplication checkpoint lives here (ROSETTA_DATA_DIR/checkpoints)
+  dataSizeLimit: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    # more replicas than partitions of telemetry.raw (32) would sit idle
+    maxReplicas: 16
+    targetCPUUtilizationPercentage: 65
+    behavior:
+      scaleDown:
+        # every change of the group size rebalances the consumers: scale down slowly
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Pods
+            value: 1
+            periodSeconds: 120
+      scaleUp:
+        stabilizationWindowSeconds: 30
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 60
+  pdb:
+    enabled: true
+    minAvailable: 1
+  # The normaliser writes its checkpoint every two seconds, with or without
+  # traffic. A checkpoint older than a minute means the loop has stopped.
+  startupProbe:
+    exec:
+      command: ["rosetta-healthcheck", "normalizer"]
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 60
+  livenessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "normalizer"]
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "normalizer"]
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+processor:
+  enabled: true
+  replicas: 2
+  args: ["processor"]
+  port: 0
+  waitForSeed: true
+  env: []
+  podAnnotations: {}
+  resources:
+    requests:
+      cpu: "1"
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
+  # time to write the pending Parquet file and commit offsets on SIGTERM
+  terminationGracePeriodSeconds: 90
+  dataSizeLimit: 256Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 65
+    behavior: {}
+  pdb:
+    enabled: true
+    minAvailable: 1
+  startupProbe: {}
+  livenessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "worker"]
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "worker"]
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+dlq:
+  enabled: true
+  # One replica: two workers would both run the same queued replay job.
+  replicas: 1
+  args: ["dlq"]
+  port: 0
+  waitForSeed: true
+  env: []
+  podAnnotations: {}
+  resources:
+    requests:
+      cpu: 200m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 768Mi
+  strategy:
+    type: Recreate
+  terminationGracePeriodSeconds: 30
+  dataSizeLimit: 64Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 1
+    targetCPUUtilizationPercentage: 70
+    behavior: {}
+  pdb:
+    enabled: false
+    minAvailable: 1
+  startupProbe: {}
+  livenessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "worker"]
+    initialDelaySeconds: 20
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    exec:
+      command: ["rosetta-healthcheck", "worker"]
+    initialDelaySeconds: 5
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ------------------------------------------------------------------ networking
+service:
+  type: ClusterIP
+  port: 80
+  annotations: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # the dashboard uses server-sent events (GET /api/v1/stream)
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: rosetta.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: rosetta-tls
+      hosts:
+        - rosetta.example.com
+
+networkPolicy:
+  enabled: true
+  # Who may reach the API on its HTTP port: the ingress controller, and
+  # Prometheus for /metrics. List of NetworkPolicyPeer.
+  apiIngressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: ingress-nginx
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: monitoring
+  # DNS lookups to the cluster DNS
+  allowDns: true
+  # Where Rosetta pods may connect to. List of NetworkPolicyEgressRule. Narrow
+  # the address ranges to the subnets of your managed services.
+  egress:
+    # Kafka, PostgreSQL, Redis, MQTT over TLS: inside the private network
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 9092
+        - protocol: TCP
+          port: 9094
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 8883
+    # object storage, the identity provider and the model API: HTTPS, but never
+    # the instance metadata service
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 169.254.169.254/32
+      ports:
+        - protocol: TCP
+          port: 443
+
+# ------------------------------------------------------------------------ MQTT
+mqtt:
+  tls:
+    # Client certificate of the gateway (mTLS). The Secret must hold ca.crt,
+    # tls.crt and tls.key, which is the layout cert-manager writes.
+    enabled: true
+    existingSecret: rosetta-mqtt-client
+    mountPath: /etc/rosetta/mqtt
+
+# ----------------------------------------------------------------------- Kafka
+kafka:
+  topicInit:
+    # The application creates missing topics itself, but always with replication
+    # factor 1 (rosetta/factory.py calls KafkaBroker without a replication
+    # argument). This job runs first and creates them with the replication a
+    # production cluster needs. The application then finds them and leaves
+    # them alone.
+    enabled: true
+    image:
+      repository: apache/kafka
+      tag: 3.9.1
+    replicationFactor: 3
+    minInSyncReplicas: 2
+    backoffLimit: 4
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+    # Partition counts are DEFAULT_PARTITIONS in rosetta/adapters/kafka_broker.py.
+    topics:
+      - name: telemetry.raw
+        partitions: 32
+        config:
+          - retention.ms=172800000
+      - name: telemetry.canonical
+        partitions: 32
+        config:
+          - retention.ms=172800000
+      # dead letters must outlive the time it takes to write a mapping: 14 days
+      - name: telemetry.dlq
+        partitions: 6
+        config:
+          - retention.ms=1209600000
+      - name: fleet.alerts
+        partitions: 6
+        config:
+          - retention.ms=604800000
+      - name: ops.metrics
+        partitions: 1
+        config:
+          - retention.ms=3600000
+      - name: ops.control
+        partitions: 1
+        config:
+          - retention.ms=604800000
+
+# ------------------------------------------------------------------------ seed
+seed:
+  # Creates the schema, applies files/postgres_extras.sql and loads the
+  # synthetic fleet. Idempotent. Runs before every install and upgrade.
+  enabled: true
+  vehicles: 100000
+  backoffLimit: 2
+  activeDeadlineSeconds: 3600
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+  dbExtras:
+    enabled: true
+    # any image with psql 11 or newer
+    image:
+      repository: postgres
+      tag: 16.15-alpine
+    retentionDays: 90
+    compressDays: 7
+    vinPartitions: 8
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+
+# ------------------------------------------------------------------ monitoring
+serviceMonitor:
+  # needs the Prometheus Operator
+  enabled: false
+  interval: 5s
+  scrapeTimeout: 4s
+  labels: {}
+  # key of secret.existingSecret that holds ROSETTA_METRICS_TOKEN; empty: no token sent
+  bearerTokenKey: ""
+
+nodeSelector: {}
+tolerations: []
+priorityClassName: ""

@@ -1,0 +1,207 @@
+{
+  "what": "SIGKILL on pipeline processes under load, then recovery and accounting",
+  "config": {
+    "vehicles": 20000,
+    "seconds": 40,
+    "normalizers": 3,
+    "processors": 2,
+    "broker": "log"
+  },
+  "killed": [
+    "normalizer-1",
+    "processor-0",
+    "dlq-0",
+    "normalizer-0"
+  ],
+  "processes_after": [
+    {
+      "name": "dlq-0",
+      "pid": 82958,
+      "alive": true,
+      "restarts": 1,
+      "last_exit": -9,
+      "uptime_s": 25
+    },
+    {
+      "name": "normalizer-0",
+      "pid": 83007,
+      "alive": true,
+      "restarts": 1,
+      "last_exit": -9,
+      "uptime_s": 18
+    },
+    {
+      "name": "normalizer-1",
+      "pid": 82821,
+      "alive": true,
+      "restarts": 1,
+      "last_exit": -9,
+      "uptime_s": 37
+    },
+    {
+      "name": "normalizer-2",
+      "pid": 82702,
+      "alive": true,
+      "restarts": 0,
+      "last_exit": null,
+      "uptime_s": 48
+    },
+    {
+      "name": "processor-0",
+      "pid": 82889,
+      "alive": true,
+      "restarts": 1,
+      "last_exit": -9,
+      "uptime_s": 31
+    },
+    {
+      "name": "processor-1",
+      "pid": 82704,
+      "alive": true,
+      "restarts": 0,
+      "last_exit": null,
+      "uptime_s": 48
+    },
+    {
+      "name": "simulator-0",
+      "pid": 82706,
+      "alive": true,
+      "restarts": 0,
+      "last_exit": null,
+      "uptime_s": 48
+    }
+  ],
+  "counts": {
+    "raw_messages": 810361,
+    "raw_distinct": 798940,
+    "raw_duplicates_sent_by_simulator": 11421,
+    "canonical_records": 734367,
+    "canonical_distinct_events": 717449,
+    "canonical_redelivered_after_kill": 16918,
+    "dead_letter_records": 84979,
+    "dead_letter_distinct": 81491,
+    "dead_letters_by_reason": {
+      "INVALID": 191,
+      "DECODE_ERROR": 179,
+      "NO_ADAPTER": 84607,
+      "SCHEMA_MISMATCH": 2
+    },
+    "archive_rows": 717449,
+    "archive_distinct": 717449
+  },
+  "checks": {
+    "killed_processes_restarted": true,
+    "no_process_left_dead": true,
+    "archive_has_no_duplicate_rows": true,
+    "archive_holds_every_translated_event": true,
+    "canonical_redelivery_was_absorbed": true,
+    "raw_messages_all_accounted": true
+  },
+  "passed": true,
+  "timeline": [
+    {
+      "t": 1.0,
+      "event": "status",
+      "raw_bytes": 6230562,
+      "restarts": {}
+    },
+    {
+      "t": 6.0,
+      "event": "status",
+      "raw_bytes": 38185879,
+      "restarts": {}
+    },
+    {
+      "t": 11.0,
+      "event": "SIGKILL",
+      "process": "normalizer-1",
+      "pid": 82701
+    },
+    {
+      "t": 11.0,
+      "event": "status",
+      "raw_bytes": 70386535,
+      "restarts": {}
+    },
+    {
+      "t": 16.1,
+      "event": "status",
+      "raw_bytes": 102623071,
+      "restarts": {
+        "normalizer-1": 1
+      }
+    },
+    {
+      "t": 17.1,
+      "event": "SIGKILL",
+      "process": "processor-0",
+      "pid": 82703
+    },
+    {
+      "t": 21.1,
+      "event": "status",
+      "raw_bytes": 134852956,
+      "restarts": {
+        "normalizer-1": 1,
+        "processor-0": 1
+      }
+    },
+    {
+      "t": 23.1,
+      "event": "SIGKILL",
+      "process": "dlq-0",
+      "pid": 82705
+    },
+    {
+      "t": 26.1,
+      "event": "status",
+      "raw_bytes": 167061792,
+      "restarts": {
+        "dlq-0": 1,
+        "normalizer-1": 1,
+        "processor-0": 1
+      }
+    },
+    {
+      "t": 29.1,
+      "event": "SIGKILL",
+      "process": "normalizer-0",
+      "pid": 82700
+    },
+    {
+      "t": 31.1,
+      "event": "status",
+      "raw_bytes": 199318686,
+      "restarts": {
+        "dlq-0": 1,
+        "normalizer-0": 1,
+        "normalizer-1": 1,
+        "processor-0": 1
+      }
+    },
+    {
+      "t": 36.1,
+      "event": "status",
+      "raw_bytes": 231508098,
+      "restarts": {
+        "dlq-0": 1,
+        "normalizer-0": 1,
+        "normalizer-1": 1,
+        "processor-0": 1
+      }
+    },
+    {
+      "t": 40.2,
+      "event": "simulator paused"
+    },
+    {
+      "t": 48.2,
+      "event": "drained",
+      "seconds_after_pause": 8.2
+    },
+    {
+      "t": 48.5,
+      "event": "pipeline stopped"
+    }
+  ]
+}

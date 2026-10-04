@@ -1,0 +1,45 @@
+# Keep the build context small and keep secrets and local state out of the image.
+.git
+.github
+.venv
+.env
+.env.*
+!.env.example
+**/__pycache__
+**/*.pyc
+**/.DS_Store
+.pytest_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+
+# runtime data of the local mode
+data
+
+# key material never enters a build context
+**/*.pem
+**/*.key
+infra/emqx/certs
+
+# web: dependencies and output are rebuilt inside the image
+web/node_modules
+web/dist
+
+# not needed at run time
+design
+docs
+tests
+scripts
+infra/helm
+infra/terraform
+infra/grafana
+infra/prometheus
+infra/emqx
+infra/sql
+infra/k8s
+infra/minio
+*.pdf
+*.docx
+docker-compose*.yml
+Makefile

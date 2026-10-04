@@ -1,0 +1,180 @@
+{
+  "label": "compose_stack_end_to_end",
+  "when": "2026-09-30T14:06:36Z",
+  "machine": "Apple M4, 10 cores, Docker Desktop 29.8.1 (the VM shares the laptop with other work)",
+  "command": "docker compose down -v && make up",
+  "time_to_healthy_s": 108,
+  "services": [
+    {
+      "service": "alloy",
+      "image": "grafana/alloy:v1.10.2",
+      "status": "Up 6 minutes"
+    },
+    {
+      "service": "api",
+      "image": "rosetta:1.0.0",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "db-extras",
+      "image": "timescale/timescaledb-ha:pg16.15-ts2.30.1",
+      "status": "Exited (0) 3 minutes ago"
+    },
+    {
+      "service": "dlq",
+      "image": "rosetta:1.0.0",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "emqx",
+      "image": "emqx/emqx:5.8.9",
+      "status": "Up 7 minutes (healthy)"
+    },
+    {
+      "service": "gateway",
+      "image": "rosetta:1.0.0",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "grafana",
+      "image": "grafana/grafana:12.4.12",
+      "status": "Up 6 minutes (healthy)"
+    },
+    {
+      "service": "kafka",
+      "image": "apache/kafka:3.9.1",
+      "status": "Up 7 minutes (healthy)"
+    },
+    {
+      "service": "loki",
+      "image": "grafana/loki:3.5.3",
+      "status": "Up 7 minutes (healthy)"
+    },
+    {
+      "service": "migrate",
+      "image": "rosetta:1.0.0",
+      "status": "Exited (0) 3 minutes ago"
+    },
+    {
+      "service": "minio",
+      "image": "pgsty/minio:RELEASE.2026-08-04T00-00-00Z",
+      "status": "Up 7 minutes"
+    },
+    {
+      "service": "minio-init",
+      "image": "rosetta:1.0.0",
+      "status": "Exited (0) 3 minutes ago"
+    },
+    {
+      "service": "normalizer",
+      "image": "rosetta:1.0.0",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "normalizer",
+      "image": "rosetta:1.0.0",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "postgres",
+      "image": "timescale/timescaledb-ha:pg16.15-ts2.30.1",
+      "status": "Up 7 minutes (healthy)"
+    },
+    {
+      "service": "processor",
+      "image": "rosetta:1.0.0",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "prometheus",
+      "image": "prom/prometheus:v3.13.4",
+      "status": "Up 6 minutes (healthy)"
+    },
+    {
+      "service": "redis",
+      "image": "redis:7.4.11-alpine",
+      "status": "Up 7 minutes (healthy)"
+    },
+    {
+      "service": "seed",
+      "image": "rosetta:1.0.0",
+      "status": "Exited (0) 3 minutes ago"
+    },
+    {
+      "service": "simulator",
+      "image": "rosetta:1.0.0",
+      "status": "Up 3 minutes (healthy)"
+    },
+    {
+      "service": "tempo",
+      "image": "grafana/tempo:2.8.2",
+      "status": "Up 7 minutes"
+    }
+  ],
+  "health": {
+    "status": "ok",
+    "checks": {
+      "database": "ok",
+      "broker": "ok",
+      "workers_reporting": 6
+    },
+    "uptime_s": 180,
+    "vehicles": 100000
+  },
+  "database": {
+    "vehicles": 100000,
+    "telemetry_rows_in_hypertable": 1747192,
+    "timescaledb": "2.30.1",
+    "pgvector": "0.8.6"
+  },
+  "flow_sample": {
+    "sim_sent": 788664,
+    "normaliser_saw": 827793,
+    "gap": -39129,
+    "raw_lag": 0,
+    "processor_lag": 0,
+    "processed": 817793,
+    "tp": {
+      "ok_per_s": 5564.0,
+      "failed_per_s": 2.6,
+      "dup_per_s": 88.2,
+      "sent_per_s": 4567.6,
+      "processed_per_s": 6181.4
+    },
+    "e2e": {
+      "n": 288192,
+      "p50": 650.16,
+      "p95": 2805.9,
+      "p99": 3534.63,
+      "max": 4001.0
+    }
+  },
+  "worker_restarts_after_start": 0,
+  "observability": {
+    "prometheus_targets": "rosetta-api up (bearer token), prometheus up",
+    "alert_rules_loaded": 12,
+    "grafana_datasources": "Prometheus, Loki, Tempo: all healthy",
+    "loki": "logs from all 17 services",
+    "tempo": "traces rosetta-gateway -> rosetta-normalizer -> rosetta-processor joined by traceparent; rosetta-api request spans",
+    "screenshots": [
+      "docs/screenshots/grafana_pipeline.png",
+      "docs/screenshots/grafana_logs.png"
+    ]
+  },
+  "static_checks": {
+    "helm lint": "0 failed",
+    "kubeconform (Kubernetes 1.33, strict)": "20 valid, 0 invalid, 1 skipped (ServiceMonitor CRD)",
+    "terraform init -backend=false && validate": "valid",
+    "terraform fmt -check": "clean",
+    "actionlint": "clean"
+  },
+  "bugs_found_by_running_it": [
+    "TimescaleDB sink wrote timestamps with a literal %f (Arrow strftime has no %f): every batch failed, and the aborted transaction then failed every later batch",
+    "PostgreSQL health check passed on the Unix socket during first-time init, so migrate ran before the server accepted TCP",
+    "MQTT gateway: new client id per restart plus 2 h sessions left offline members in the shared group that received and dropped a share of the traffic; messages were acknowledged before reaching Kafka",
+    "EMQX defaults (32 in flight, 1,000 mailbox, 1,000 queue) throttled or disconnected the gateway once acknowledgements waited for Kafka",
+    "Kafka consumers crashed on commit during a consumer-group rebalance (REBALANCE_IN_PROGRESS, ILLEGAL_GENERATION), which caused another rebalance",
+    "Prometheus overwrote the metrics' service label with the target label, so per-service alerts and two dashboard panels matched nothing",
+    "OpenTelemetry metrics were exported to Tempo, which answers 404"
+  ]
+}

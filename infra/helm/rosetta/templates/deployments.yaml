@@ -1,0 +1,213 @@
+{{- /*
+One Deployment per component. The components differ only in their values
+(arguments, probes, resources, strategy), so one template renders all five.
+*/ -}}
+{{- range $name := list "api" "gateway" "normalizer" "processor" "dlq" }}
+{{- $c := index $.Values $name }}
+{{- if $c.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rosetta.fullname" $ }}-{{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "rosetta.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  {{- if not $c.autoscaling.enabled }}
+  replicas: {{ $c.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy:
+    {{- toYaml $c.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "rosetta.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "rosetta.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+      annotations:
+        # a change of the settings restarts the pods
+        checksum/config: {{ include "rosetta.configData" $ | sha256sum }}
+        {{- with $c.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "rosetta.serviceAccountName" $ }}
+      automountServiceAccountToken: {{ $.Values.serviceAccount.automount }}
+      enableServiceLinks: false
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ $c.terminationGracePeriodSeconds }}
+      {{- if $.Values.topologySpread.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: {{ $.Values.topologySpread.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              {{- include "rosetta.selectorLabels" $ | nindent 14 }}
+              app.kubernetes.io/component: {{ $name }}
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "rosetta.selectorLabels" $ | nindent 14 }}
+              app.kubernetes.io/component: {{ $name }}
+      {{- end }}
+      {{- if $.Values.topologySpread.podAntiAffinity }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "rosetta.selectorLabels" $ | nindent 20 }}
+                    app.kubernetes.io/component: {{ $name }}
+      {{- end }}
+      {{- with $.Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $.Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if and $.Values.waitForSeed.enabled $c.waitForSeed }}
+      initContainers:
+        - name: wait-for-seed
+          image: {{ include "rosetta.image" $ }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args:
+            - python
+            - -c
+            - |
+              import sys, time
+              from rosetta.db.session import session_scope
+              from rosetta.services.seed import is_seeded
+              deadline = time.monotonic() + {{ $.Values.waitForSeed.timeoutSeconds }}
+              while True:
+                  try:
+                      with session_scope() as s:
+                          if is_seeded(s):
+                              print("the database is seeded")
+                              sys.exit(0)
+                      why = "not seeded yet"
+                  except Exception as e:
+                      why = type(e).__name__
+                  if time.monotonic() > deadline:
+                      print("gave up waiting for the seed job:", why)
+                      sys.exit(1)
+                  print("waiting for the seed job:", why)
+                  time.sleep(5)
+          env:
+            - name: ROSETTA_SERVICE
+              value: wait-for-seed
+          envFrom:
+            - configMapRef:
+                name: {{ include "rosetta.fullname" $ }}-config
+            - secretRef:
+                name: {{ $.Values.secret.existingSecret }}
+          resources:
+            {{- toYaml $.Values.waitForSeed.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "rosetta.image" $ }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          args:
+            {{- toYaml $c.args | nindent 12 }}
+          env:
+            - name: ROSETTA_SERVICE
+              value: {{ $name }}
+            {{- if and (eq $name "gateway") $.Values.mqtt.tls.enabled }}
+            - name: ROSETTA_MQTT_CA
+              value: {{ $.Values.mqtt.tls.mountPath }}/ca.crt
+            - name: ROSETTA_MQTT_CERT
+              value: {{ $.Values.mqtt.tls.mountPath }}/tls.crt
+            - name: ROSETTA_MQTT_KEY
+              value: {{ $.Values.mqtt.tls.mountPath }}/tls.key
+            {{- end }}
+            {{- with $c.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "rosetta.fullname" $ }}-config
+            - secretRef:
+                name: {{ $.Values.secret.existingSecret }}
+          {{- if $c.port }}
+          ports:
+            - name: http
+              containerPort: {{ $c.port }}
+              protocol: TCP
+          {{- end }}
+          {{- with $c.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $c.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $c.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml $c.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ $.Values.config.ROSETTA_DATA_DIR }}
+            - name: tmp
+              mountPath: /tmp
+            {{- if and (eq $name "gateway") $.Values.mqtt.tls.enabled }}
+            - name: mqtt-tls
+              mountPath: {{ $.Values.mqtt.tls.mountPath }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        # The root file system is read-only. ROSETTA_DATA_DIR is where the normaliser
+        # and the processor keep their de-duplication checkpoints. An emptyDir survives
+        # a restart of the container, so a restarted one resumes exact de-duplication.
+        # It is lost with the pod, and nothing is lost with it: offsets are committed to
+        # Kafka and a fresh replica re-reads at most the records since the last commit.
+        # Until that replica has seen each vehicle once its window is empty, so a repeat
+        # of one of those records can reach the archive twice. The alert and telemetry
+        # tables reject repeats outright; the Parquet archive is append-only, so a batch
+        # report over that window can count a few events twice.
+        - name: data
+          emptyDir:
+            sizeLimit: {{ $c.dataSizeLimit }}
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        {{- if and (eq $name "gateway") $.Values.mqtt.tls.enabled }}
+        - name: mqtt-tls
+          secret:
+            secretName: {{ $.Values.mqtt.tls.existingSecret }}
+            defaultMode: 0440
+        {{- end }}
+{{- end }}
+{{- end }}

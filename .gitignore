@@ -1,0 +1,40 @@
+# runtime data and caches
+data/
+# demo resets move the old world aside as data.<name>; each is gigabytes
+data.*/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+coverage.xml
+# test and scan reports, written by the suites and by CI; `make clean` removes them
+reports/
+
+# web
+web/node_modules/
+web/dist/
+
+# secrets: never commit real ones
+.env
+*.pem
+*.key
+
+# reference material supplied for the design, not part of the product
+design/
+
+# infrastructure state
+infra/terraform/**/.terraform/
+infra/terraform/**/*.tfstate*
+.DS_Store
+
+docs/screenshots/
+docs/diagrams/
+docs/sbom.txt
+# raw scan reports; the summary beside them is kept
+docs/evidence/security/*
+!docs/evidence/security/README.md
+

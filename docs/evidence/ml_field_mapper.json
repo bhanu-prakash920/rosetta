@@ -1,0 +1,260 @@
+{
+  "task": "map a source telemetry field to a canonical field and unit",
+  "model": "ExtraTreesClassifier(300 trees)",
+  "data": {
+    "train_dialects": 700,
+    "test_dialects": 160,
+    "train_rows": 13048,
+    "test_rows": 2970,
+    "labels": 37,
+    "features": 304,
+    "leakage_controls": [
+      "test dialects use field names that never occur in training",
+      "tokens of the demo dialects are removed from the training vocabulary: akku, aussen, breite, ereignis, fahrt, fehler, fin, klima, kopf, kurs, ladung, laenge, lfd, nr, odometer, ort, speed, stand, strecke, tank, v, zeit, zuendung",
+      "train and test fleets use different seeds and regions"
+    ]
+  },
+  "model_scores": {
+    "exact_label_accuracy": 0.9909,
+    "field_accuracy": 0.9909,
+    "unit_accuracy_when_field_right": 1.0,
+    "recall_on_real_fields": 0.9872,
+    "distractors_wrongly_mapped": 0.0,
+    "macro_f1": 0.9888,
+    "n": 2970
+  },
+  "baseline_scores": {
+    "exact_label_accuracy": 0.3582,
+    "field_accuracy": 0.4313,
+    "unit_accuracy_when_field_right": 0.4022,
+    "recall_on_real_fields": 0.1591,
+    "distractors_wrongly_mapped": 0.1562,
+    "macro_f1": 0.1193,
+    "n": 2970
+  },
+  "baseline": "name similarity (difflib) against canonical names and aliases, unit from name suffix",
+  "ablations": {
+    "names_only": {
+      "exact_label_accuracy": 0.4441,
+      "field_accuracy": 0.538,
+      "unit_accuracy_when_field_right": 0.3481,
+      "recall_on_real_fields": 0.2645,
+      "distractors_wrongly_mapped": 0.1181,
+      "macro_f1": 0.19,
+      "n": 2970
+    },
+    "values_only": {
+      "exact_label_accuracy": 0.9788,
+      "field_accuracy": 0.9788,
+      "unit_accuracy_when_field_right": 1.0,
+      "recall_on_real_fields": 0.9929,
+      "distractors_wrongly_mapped": 0.0556,
+      "macro_f1": 0.9851,
+      "n": 2970
+    },
+    "values_and_physics": {
+      "exact_label_accuracy": 0.9835,
+      "field_accuracy": 0.9835,
+      "unit_accuracy_when_field_right": 1.0,
+      "recall_on_real_fields": 0.9995,
+      "distractors_wrongly_mapped": 0.0556,
+      "macro_f1": 0.9943,
+      "n": 2970
+    },
+    "names_and_values": {
+      "exact_label_accuracy": 0.9845,
+      "field_accuracy": 0.9845,
+      "unit_accuracy_when_field_right": 1.0,
+      "recall_on_real_fields": 0.9782,
+      "distractors_wrongly_mapped": 0.0,
+      "macro_f1": 0.9773,
+      "n": 2970
+    }
+  },
+  "whole_dialect": {
+    "dialects": 160,
+    "model_fully_correct": 0.9688,
+    "baseline_fully_correct": 0.0,
+    "model_fields_correct_after_assignment": 0.9957
+  },
+  "per_field_model": {
+    "ambient_c": {
+      "n": 147,
+      "exact": 1.0
+    },
+    "dtc": {
+      "n": 141,
+      "exact": 1.0
+    },
+    "evt": {
+      "n": 133,
+      "exact": 1.0
+    },
+    "fuel_pct": {
+      "n": 141,
+      "exact": 1.0
+    },
+    "heading_deg": {
+      "n": 146,
+      "exact": 1.0
+    },
+    "ignition": {
+      "n": 145,
+      "exact": 0.9931
+    },
+    "ignore": {
+      "n": 864,
+      "exact": 1.0
+    },
+    "lat": {
+      "n": 160,
+      "exact": 0.8562
+    },
+    "lon": {
+      "n": 160,
+      "exact": 0.9812
+    },
+    "odo_km": {
+      "n": 160,
+      "exact": 1.0
+    },
+    "seq": {
+      "n": 160,
+      "exact": 1.0
+    },
+    "soc_pct": {
+      "n": 133,
+      "exact": 1.0
+    },
+    "speed_kmh": {
+      "n": 160,
+      "exact": 1.0
+    },
+    "ts": {
+      "n": 160,
+      "exact": 1.0
+    },
+    "vin": {
+      "n": 160,
+      "exact": 1.0
+    }
+  },
+  "per_field_baseline": {
+    "ambient_c": {
+      "n": 147,
+      "exact": 0.1156
+    },
+    "dtc": {
+      "n": 141,
+      "exact": 0.0
+    },
+    "evt": {
+      "n": 133,
+      "exact": 0.3459
+    },
+    "fuel_pct": {
+      "n": 141,
+      "exact": 0.156
+    },
+    "heading_deg": {
+      "n": 146,
+      "exact": 0.0
+    },
+    "ignition": {
+      "n": 145,
+      "exact": 0.269
+    },
+    "ignore": {
+      "n": 864,
+      "exact": 0.8438
+    },
+    "lat": {
+      "n": 160,
+      "exact": 0.2375
+    },
+    "lon": {
+      "n": 160,
+      "exact": 0.25
+    },
+    "odo_km": {
+      "n": 160,
+      "exact": 0.0312
+    },
+    "seq": {
+      "n": 160,
+      "exact": 0.3625
+    },
+    "soc_pct": {
+      "n": 133,
+      "exact": 0.0752
+    },
+    "speed_kmh": {
+      "n": 160,
+      "exact": 0.0
+    },
+    "ts": {
+      "n": 160,
+      "exact": 0.0875
+    },
+    "vin": {
+      "n": 160,
+      "exact": 0.2875
+    }
+  },
+  "share_of_importance": {
+    "physics": 0.1432,
+    "values": 0.8004,
+    "names": 0.0564
+  },
+  "top_dense_features": [
+    [
+      "step_median_log",
+      0.0854
+    ],
+    [
+      "log_abs_max",
+      0.0819
+    ],
+    [
+      "log_range",
+      0.0746
+    ],
+    [
+      "decimals",
+      0.0715
+    ],
+    [
+      "log_abs_median",
+      0.0545
+    ],
+    [
+      "frac_null",
+      0.0536
+    ],
+    [
+      "distinct_ratio",
+      0.0414
+    ],
+    [
+      "changes",
+      0.0303
+    ],
+    [
+      "speed_ratio_log",
+      0.0269
+    ],
+    [
+      "frac_integer",
+      0.0248
+    ],
+    [
+      "heading_fit",
+      0.0242
+    ],
+    [
+      "mono_strict",
+      0.0228
+    ]
+  ],
+  "seconds": 61.9
+}

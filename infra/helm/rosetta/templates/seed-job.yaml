@@ -1,0 +1,164 @@
+{{- if .Values.seed.enabled }}
+{{- /*
+The seed runs as a hook before every install and upgrade, so the pods that read
+the fleet at start-up find it. Hooks run before the chart's own ConfigMap
+exists, which is why the job brings its own copies.
+
+Order inside the job (see the comment at the top of files/postgres_extras.sql):
+  1. migrate     init container   the application creates the relational schema
+  2. db-extras   init container   extensions, telemetry table, embedding.vec
+  3. seed        container        synthetic fleet, users, mappings, mapping memory
+Every step is idempotent.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rosetta.fullname" . }}-seed-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rosetta.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seed
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  {{- include "rosetta.configData" . | trim | nindent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rosetta.fullname" . }}-seed-sql
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rosetta.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seed
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  postgres_extras.sql: |
+    {{- .Files.Get "files/postgres_extras.sql" | nindent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "rosetta.fullname" . }}-seed
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rosetta.labels" . | nindent 4 }}
+    app.kubernetes.io/component: seed
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.seed.backoffLimit }}
+  activeDeadlineSeconds: {{ .Values.seed.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "rosetta.labels" . | nindent 8 }}
+        app.kubernetes.io/component: seed
+    spec:
+      restartPolicy: Never
+      # a hook runs before the chart's ServiceAccount exists
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: migrate
+          image: {{ include "rosetta.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["migrate"]
+          env:
+            - name: ROSETTA_SERVICE
+              value: migrate
+          envFrom:
+            - configMapRef:
+                name: {{ include "rosetta.fullname" . }}-seed-config
+            - secretRef:
+                name: {{ .Values.secret.existingSecret }}
+          resources:
+            {{- toYaml .Values.seed.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.config.ROSETTA_DATA_DIR }}
+            - name: tmp
+              mountPath: /tmp
+        {{- if .Values.seed.dbExtras.enabled }}
+        - name: db-extras
+          image: {{ printf "%s:%s" .Values.seed.dbExtras.image.repository .Values.seed.dbExtras.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh", "-ec"]
+          # The application's URL names the SQLAlchemy driver. psql wants the plain
+          # scheme: the same rewrite as in rosetta/adapters/timescale.py.
+          args:
+            - |
+              url="$(printf '%s' "$ROSETTA_DATABASE_URL" | sed 's#^postgresql+psycopg2://#postgresql://#')"
+              exec psql "$url" -X -v ON_ERROR_STOP=1 \
+                -v retention_days={{ .Values.seed.dbExtras.retentionDays }} \
+                -v compress_days={{ .Values.seed.dbExtras.compressDays }} \
+                -v vin_partitions={{ .Values.seed.dbExtras.vinPartitions }} \
+                -f /sql/postgres_extras.sql
+          env:
+            - name: HOME
+              value: /tmp
+            - name: ROSETTA_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.existingSecret }}
+                  key: ROSETTA_DATABASE_URL
+          resources:
+            {{- toYaml .Values.seed.dbExtras.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+        {{- end }}
+      containers:
+        - name: seed
+          image: {{ include "rosetta.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["seed", "--vehicles", {{ int64 .Values.seed.vehicles | quote }}]
+          env:
+            - name: ROSETTA_SERVICE
+              value: seed
+          envFrom:
+            - configMapRef:
+                name: {{ include "rosetta.fullname" . }}-seed-config
+            - secretRef:
+                name: {{ .Values.secret.existingSecret }}
+          resources:
+            {{- toYaml .Values.seed.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.config.ROSETTA_DATA_DIR }}
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+        - name: sql
+          configMap:
+            name: {{ include "rosetta.fullname" . }}-seed-sql
+{{- end }}

@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars and adjust. Nothing in here is a secret.
+region      = "eu-west-1"
+project     = "rosetta"
+environment = "production"
+
+vpc_cidr = "10.20.0.0/16"
+az_count = 3
+
+# Keep the Kubernetes API private. If you must open it, name your own ranges.
+cluster_endpoint_public_access       = false
+cluster_endpoint_public_access_cidrs = []
+
+tags = {
+  Owner      = "platform-team"
+  CostCentre = "example-0000"
+}

@@ -1,0 +1,53 @@
+# Prometheus for the Compose stack.
+#
+# Rosetta exposes its pipeline metrics in one place: GET /metrics on the API.
+# The workers do not serve HTTP. Each one publishes a snapshot per second to the
+# ops.metrics topic and the API aggregates them (rosetta/pipeline/metrics.py).
+# So there is one Rosetta target, and the health of the workers is read from
+# the numbers the API reports about them.
+#
+# In Kubernetes the same endpoint is scraped through the pod annotations or the
+# ServiceMonitor of the Helm chart (infra/helm/rosetta), and alerts.yml is
+# loaded as it is.
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    stack: rosetta-compose
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+# No Alertmanager in the Compose stack: firing alerts are visible in the
+# Prometheus UI (Alerts) and in Grafana. To deliver them, add:
+#
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: rosetta-api
+    metrics_path: /metrics
+    # the aggregation window of the throughput gauge is 10 s, so 5 s resolves it
+    scrape_interval: 5s
+    scrape_timeout: 4s
+    # /metrics asks for a bearer token (ROSETTA_METRICS_TOKEN). Compose mounts it
+    # as a secret file; in Kubernetes it comes from the same Secret as the API's.
+    # The metrics carry their own `service` label (normalizer, processor, dlq).
+    # Without this, the target label service="api" below would overwrite it and
+    # every per-service alert would match nothing.
+    honor_labels: true
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/metrics_token
+    static_configs:
+      - targets: ["api:8000"]
+        labels:
+          service: api
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

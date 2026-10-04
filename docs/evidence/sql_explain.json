@@ -1,0 +1,99 @@
+{
+  "postgres": "PostgreSQL 16.15 on aarch64-unknown-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+  "rows": {
+    "vehicles": 100000,
+    "alerts": 1000000,
+    "audit_entries": 400005
+  },
+  "cases": [
+    {
+      "name": "Fleet manager pages through their vehicles (page 400)",
+      "why": "The console's vehicle list for one tenant. Offset pagination rereads every earlier page.",
+      "change": "Keyset pagination (WHERE id > last seen id) instead of OFFSET, plus the composite index (fleet_id, id) so each fleet's vehicles are read in id order.",
+      "ddl": [
+        "CREATE INDEX ix_vehicle_fleet_id_id ON vehicle (fleet_id, id)"
+      ],
+      "before_sql": "SELECT v.id, v.vin, v.powertrain, o.key, f.name FROM vehicle v JOIN fleet f ON f.id = v.fleet_id JOIN oem o ON o.id = v.oem_id WHERE f.tenant_id = %(t)s ORDER BY v.id LIMIT 25 OFFSET 10000",
+      "after_sql": "SELECT v.id, v.vin, v.powertrain, o.key, f.name FROM vehicle v JOIN fleet f ON f.id = v.fleet_id JOIN oem o ON o.id = v.oem_id WHERE f.tenant_id = %(t)s AND v.id > %(after)s ORDER BY v.id LIMIT 25",
+      "before_ms": 7.698,
+      "after_ms": 0.145,
+      "speedup": 53.1,
+      "before_plan": "Limit  (cost=2694.16..2694.16 rows=1 width=53) (actual time=7.576..7.577 rows=0 loops=1)\n  Buffers: shared hit=1244\n  ->  Sort  (cost=2687.16..2694.16 rows=2800 width=53) (actual time=7.565..7.573 rows=263 loops=1)\n        Sort Key: v.id\n        Sort Method: quicksort  Memory: 59kB\n        Buffers: shared hit=1244\n        ->  Hash Join  (cost=7.35..2526.84 rows=2800 width=53) (actual time=0.022..7.529 rows=263 loops=1)\n              Hash Cond: (v.oem_id = o.id)\n              Buffers: shared hit=1244\n              ->  Hash Join  (cost=6.21..2513.16 rows=2800 width=53) (actual time=0.015..7.498 rows=263 loops=1)\n                    Hash Cond: (v.fleet_id = f.id)\n                    Buffers: shared hit=1243\n                    ->  Seq Scan on vehicle v  (cost=0.00..2240.00 rows=100000 width=46) (actual time=0.001..3.501 rows=100000 loops=1)\n                          Buffers: shared hit=1240\n                    ->  Hash  (cost=6.12..6.12 rows=7 width=23) (actual time=0.009..0.009 rows=7 loops=1)\n                          Buckets: 1024  Batches: 1  Memory Usage: 9kB\n                          Buffers: shared hit=3\n                          ->  Seq Scan on fleet f  (cost=0.00..6.12 rows=7 width=23) (actual time=0.001..0.007 rows=7 loops=1)\n                                Filter: (tenant_id = 1)\n                                Rows Removed by Filter: 243\n                                Buffers: shared hit=3\n              ->  Hash  (cost=1.06..1.06 rows=6 width=16) (actual time=0.005..0.005 rows=6 loops=1)\n                    Buckets: 1024  Batches: 1  Memory Usage: 9kB\n                    Buffers: shared hit=1\n                    ->  Seq Scan on oem o  (cost=0.00..1.06 rows=6 width=16) (actual time=0.002..0.002 rows=6 loops=1)\n                          Buffers: shared hit=1\nPlanning:\n  Buffers: shared hit=8\nPlanning Time: 0.095 ms\nExecution Time: 7.604 ms",
+      "after_plan": "Limit  (cost=59.33..59.39 rows=25 width=53) (actual time=0.119..0.119 rows=1 loops=1)\n  Buffers: shared hit=24\n  ->  Sort  (cost=59.33..59.40 rows=30 width=53) (actual time=0.119..0.119 rows=1 loops=1)\n        Sort Key: v.id\n        Sort Method: quicksort  Memory: 25kB\n        Buffers: shared hit=24\n        ->  Nested Loop  (cost=6.65..58.59 rows=30 width=53) (actual time=0.030..0.117 rows=1 loops=1)\n              Buffers: shared hit=24\n              ->  Hash Join  (cost=6.51..56.82 rows=30 width=53) (actual time=0.026..0.113 rows=1 loops=1)\n                    Hash Cond: (v.fleet_id = f.id)\n                    Buffers: shared hit=22\n                    ->  Index Scan using vehicle_pkey on vehicle v  (cost=0.29..47.79 rows=1057 width=46) (actual time=0.005..0.057 rows=1045 loops=1)\n                          Index Cond: (id > 98955)\n                          Buffers: shared hit=19\n                    ->  Hash  (cost=6.12..6.12 rows=7 width=23) (actual time=0.009..0.009 rows=7 loops=1)\n                          Buckets: 1024  Batches: 1  Memory Usage: 9kB\n                          Buffers: shared hit=3\n                          ->  Seq Scan on fleet f  (cost=0.00..6.12 rows=7 width=23) (actual time=0.001..0.007 rows=7 loops=1)\n                                Filter: (tenant_id = 1)\n                                Rows Removed by Filter: 243\n                                Buffers: shared hit=3\n              ->  Memoize  (cost=0.14..0.17 rows=1 width=16) (actual time=0.003..0.003 rows=1 loops=1)\n                    Cache Key: v.oem_id\n                    Cache Mode: logical\n                    Hits: 0  Misses: 1  Evictions: 0  Overflows: 0  Memory Usage: 1kB\n                    Buffers: shared hit=2\n                    ->  Index Scan using oem_pkey on oem o  (cost=0.13..0.16 rows=1 width=16) (actual time=0.003..0.003 rows=1 loops=1)\n                          Index Cond: (id = v.oem_id)\n                          Buffers: shared hit=2\nPlanning:\n  Buffers: shared hit=19\nPlanning Time: 0.109 ms\nExecution Time: 0.137 ms"
+    },
+    {
+      "name": "Latest alerts, newest first",
+      "why": "The alerts panel refreshes every three seconds for every open console.",
+      "change": "Composite index (ts, id) matching the ORDER BY: the newest 30 rows are read from the end of the index instead of sorting a million rows.",
+      "ddl": [
+        "CREATE INDEX ix_alert_ts_id ON alert (ts, id)"
+      ],
+      "before_sql": "SELECT a.id, a.kind, a.severity, a.ts, v.vin FROM alert a JOIN vehicle v ON v.id = a.vehicle_id ORDER BY a.ts DESC, a.id DESC LIMIT 30",
+      "after_sql": "SELECT a.id, a.kind, a.severity, a.ts, v.vin FROM alert a JOIN vehicle v ON v.id = a.vehicle_id ORDER BY a.ts DESC, a.id DESC LIMIT 30",
+      "before_ms": 277.663,
+      "after_ms": 0.297,
+      "speedup": 934.9,
+      "before_plan": "Limit  (cost=58807.56..58807.64 rows=30 width=51) (actual time=267.222..267.228 rows=30 loops=1)\n  Buffers: shared hit=11274 read=3124\n  ->  Sort  (cost=58807.56..61307.56 rows=1000000 width=51) (actual time=267.219..267.221 rows=30 loops=1)\n        Sort Key: a.ts DESC, a.id DESC\n        Sort Method: top-N heapsort  Memory: 33kB\n        Buffers: shared hit=11274 read=3124\n        ->  Hash Join  (cost=3490.00..29273.11 rows=1000000 width=51) (actual time=10.901..166.419 rows=1000000 loops=1)\n              Hash Cond: (a.vehicle_id = v.id)\n              Buffers: shared hit=11274 read=3124\n              ->  Seq Scan on alert a  (cost=0.00..23158.00 rows=1000000 width=41) (actual time=0.008..42.824 rows=1000000 loops=1)\n                    Buffers: shared hit=10034 read=3124\n              ->  Hash  (cost=2240.00..2240.00 rows=100000 width=26) (actual time=10.684..10.685 rows=100000 loops=1)\n                    Buckets: 131072  Batches: 1  Memory Usage: 7274kB\n                    Buffers: shared hit=1240\n                    ->  Seq Scan on vehicle v  (cost=0.00..2240.00 rows=100000 width=26) (actual time=0.003..4.617 rows=100000 loops=1)\n                          Buffers: shared hit=1240\nPlanning:\n  Buffers: shared hit=14\nPlanning Time: 0.117 ms\nExecution Time: 267.791 ms",
+      "after_plan": "Limit  (cost=0.73..4.24 rows=30 width=50) (actual time=0.008..0.040 rows=30 loops=1)\n  Buffers: shared hit=94\n  ->  Nested Loop  (cost=0.73..117053.64 rows=1000000 width=50) (actual time=0.008..0.039 rows=30 loops=1)\n        Buffers: shared hit=94\n        ->  Index Scan Backward using ix_alert_ts_id on alert a  (cost=0.42..60821.99 rows=1000000 width=40) (actual time=0.004..0.005 rows=30 loops=1)\n              Buffers: shared hit=4\n        ->  Memoize  (cost=0.30..0.33 rows=1 width=26) (actual time=0.001..0.001 rows=1 loops=30)\n              Cache Key: a.vehicle_id\n              Cache Mode: logical\n              Hits: 0  Misses: 30  Evictions: 0  Overflows: 0  Memory Usage: 4kB\n              Buffers: shared hit=90\n              ->  Index Scan using vehicle_pkey on vehicle v  (cost=0.29..0.32 rows=1 width=26) (actual time=0.001..0.001 rows=1 loops=30)\n                    Index Cond: (id = a.vehicle_id)\n                    Buffers: shared hit=90\nPlanning:\n  Buffers: shared hit=14\nPlanning Time: 0.061 ms\nExecution Time: 0.300 ms"
+    },
+    {
+      "name": "Alert history of one vehicle",
+      "why": "The vehicle drawer and the agent's evidence both ask 'what happened to this vehicle'.",
+      "change": "Nothing to add. The unique constraint (vehicle_id, kind, ts) that makes alert inserts idempotent already starts with vehicle_id, so the planner uses it. A second index (vehicle_id, ts) was measured and removed from the schema: it cost writes and saved nothing.",
+      "ddl": [],
+      "before_sql": "SELECT id, kind, severity, ts FROM alert WHERE vehicle_id = %(v)s ORDER BY ts DESC LIMIT 50",
+      "after_sql": "SELECT id, kind, severity, ts FROM alert WHERE vehicle_id = %(v)s ORDER BY ts DESC LIMIT 50",
+      "before_ms": 0.027,
+      "after_ms": 0.031,
+      "speedup": 0.9,
+      "before_plan": "Limit  (cost=43.97..43.99 rows=10 width=32) (actual time=0.011..0.012 rows=10 loops=1)\n  Buffers: shared hit=13\n  ->  Sort  (cost=43.97..43.99 rows=10 width=32) (actual time=0.011..0.012 rows=10 loops=1)\n        Sort Key: ts DESC\n        Sort Method: quicksort  Memory: 25kB\n        Buffers: shared hit=13\n        ->  Bitmap Heap Scan on alert  (cost=4.50..43.80 rows=10 width=32) (actual time=0.006..0.009 rows=10 loops=1)\n              Recheck Cond: (vehicle_id = 44127)\n              Heap Blocks: exact=10\n              Buffers: shared hit=13\n              ->  Bitmap Index Scan on uq_alert_idempotent  (cost=0.00..4.50 rows=10 width=0) (actual time=0.005..0.005 rows=10 loops=1)\n                    Index Cond: (vehicle_id = 44127)\n                    Buffers: shared hit=3\nPlanning Time: 0.016 ms\nExecution Time: 0.022 ms",
+      "after_plan": "Limit  (cost=43.97..43.99 rows=10 width=32) (actual time=0.012..0.012 rows=10 loops=1)\n  Buffers: shared hit=13\n  ->  Sort  (cost=43.97..43.99 rows=10 width=32) (actual time=0.011..0.012 rows=10 loops=1)\n        Sort Key: ts DESC\n        Sort Method: quicksort  Memory: 25kB\n        Buffers: shared hit=13\n        ->  Bitmap Heap Scan on alert  (cost=4.50..43.80 rows=10 width=32) (actual time=0.006..0.008 rows=10 loops=1)\n              Recheck Cond: (vehicle_id = 44127)\n              Heap Blocks: exact=10\n              Buffers: shared hit=13\n              ->  Bitmap Index Scan on uq_alert_idempotent  (cost=0.00..4.50 rows=10 width=0) (actual time=0.005..0.005 rows=10 loops=1)\n                    Index Cond: (vehicle_id = 44127)\n                    Buffers: shared hit=3\nPlanning Time: 0.011 ms\nExecution Time: 0.023 ms"
+    },
+    {
+      "name": "Critical alerts only (partial index)",
+      "why": "An on-call view shows only critical alerts. They are 40% of rows here and far fewer in real fleets.",
+      "change": "Partial index on (ts) WHERE severity = 'critical': smaller than a full index and exactly what the query needs.",
+      "ddl": [
+        "CREATE INDEX ix_alert_critical_ts ON alert (ts) WHERE severity = 'critical'"
+      ],
+      "before_sql": "SELECT id, vehicle_id, kind, ts FROM alert WHERE severity = 'critical' ORDER BY ts DESC LIMIT 30",
+      "after_sql": "SELECT id, vehicle_id, kind, ts FROM alert WHERE severity = 'critical' ORDER BY ts DESC LIMIT 30",
+      "before_ms": 88.432,
+      "after_ms": 0.014,
+      "speedup": 6316.6,
+      "before_plan": "Limit  (cost=37465.87..37465.95 rows=30 width=32) (actual time=85.460..85.462 rows=30 loops=1)\n  Buffers: shared hit=10421 read=2737\n  ->  Sort  (cost=37465.87..38465.37 rows=399800 width=32) (actual time=85.459..85.460 rows=30 loops=1)\n        Sort Key: ts DESC\n        Sort Method: top-N heapsort  Memory: 29kB\n        Buffers: shared hit=10421 read=2737\n        ->  Seq Scan on alert  (cost=0.00..25658.00 rows=399800 width=32) (actual time=0.010..49.546 rows=400000 loops=1)\n              Filter: ((severity)::text = 'critical'::text)\n              Rows Removed by Filter: 600000\n              Buffers: shared hit=10421 read=2737\nPlanning Time: 0.048 ms\nExecution Time: 85.486 ms",
+      "after_plan": "Limit  (cost=0.42..1.60 rows=30 width=32) (actual time=0.011..0.015 rows=30 loops=1)\n  Buffers: shared hit=5\n  ->  Index Scan Backward using ix_alert_critical_ts on alert  (cost=0.42..15654.92 rows=399700 width=32) (actual time=0.011..0.013 rows=30 loops=1)\n        Buffers: shared hit=5\nPlanning Time: 0.020 ms\nExecution Time: 0.021 ms"
+    },
+    {
+      "name": "Audit trail of one person",
+      "why": "A compliance question: everything one user did, newest first.",
+      "change": "Composite index (actor, id).",
+      "ddl": [
+        "CREATE INDEX ix_audit_actor ON audit_log (actor, id)"
+      ],
+      "before_sql": "SELECT id, ts, action, resource FROM audit_log WHERE actor = %(a)s ORDER BY id DESC LIMIT 50",
+      "after_sql": "SELECT id, ts, action, resource FROM audit_log WHERE actor = %(a)s ORDER BY id DESC LIMIT 50",
+      "before_ms": 0.744,
+      "after_ms": 0.027,
+      "speedup": 27.6,
+      "before_plan": "Limit  (cost=0.42..933.91 rows=50 width=54) (actual time=0.010..0.734 rows=50 loops=1)\n  Buffers: shared hit=577\n  ->  Index Scan Backward using audit_log_pkey on audit_log  (cost=0.42..24700.51 rows=1323 width=54) (actual time=0.010..0.732 rows=50 loops=1)\n        Filter: ((actor)::text = 'user17@rosetta.example'::text)\n        Rows Removed by Filter: 14734\n        Buffers: shared hit=577\nPlanning Time: 0.009 ms\nExecution Time: 0.739 ms",
+      "after_plan": "Limit  (cost=0.42..193.29 rows=50 width=54) (actual time=0.007..0.019 rows=50 loops=1)\n  Buffers: shared hit=53\n  ->  Index Scan Backward using ix_audit_actor on audit_log  (cost=0.42..5107.51 rows=1324 width=54) (actual time=0.007..0.016 rows=50 loops=1)\n        Index Cond: ((actor)::text = 'user17@rosetta.example'::text)\n        Buffers: shared hit=53\nPlanning Time: 0.011 ms\nExecution Time: 0.023 ms"
+    },
+    {
+      "name": "Vehicles per source and powertrain (materialised view)",
+      "why": "The sources page and reports aggregate the whole vehicle table on every load.",
+      "change": "Materialised view refreshed when vehicles are added (REFRESH MATERIALIZED VIEW CONCURRENTLY needs the unique index created with it).",
+      "ddl": [
+        "CREATE MATERIALIZED VIEW mv_fleet_mix AS SELECT o.key AS oem, v.powertrain, count(*) AS vehicles\n                       FROM vehicle v JOIN oem o ON o.id = v.oem_id GROUP BY o.key, v.powertrain",
+        "CREATE UNIQUE INDEX ux_mv_fleet_mix ON mv_fleet_mix (oem, powertrain)"
+      ],
+      "before_sql": "SELECT o.key, v.powertrain, count(*) FROM vehicle v JOIN oem o ON o.id = v.oem_id GROUP BY o.key, v.powertrain",
+      "after_sql": "SELECT oem, powertrain, vehicles FROM mv_fleet_mix",
+      "before_ms": 25.121,
+      "after_ms": 0.003,
+      "speedup": 8373.7,
+      "before_plan": "HashAggregate  (cost=3439.06..3439.24 rows=18 width=20) (actual time=21.168..21.170 rows=16 loops=1)\n  Group Key: o.key, v.powertrain\n  Batches: 1  Memory Usage: 24kB\n  Buffers: shared hit=1241\n  ->  Hash Join  (cost=1.14..2689.06 rows=100000 width=12) (actual time=0.016..11.747 rows=100000 loops=1)\n        Hash Cond: (v.oem_id = o.id)\n        Buffers: shared hit=1241\n        ->  Seq Scan on vehicle v  (cost=0.00..2240.00 rows=100000 width=12) (actual time=0.003..3.852 rows=100000 loops=1)\n              Buffers: shared hit=1240\n        ->  Hash  (cost=1.06..1.06 rows=6 width=16) (actual time=0.007..0.007 rows=6 loops=1)\n              Buckets: 1024  Batches: 1  Memory Usage: 9kB\n              Buffers: shared hit=1\n              ->  Seq Scan on oem o  (cost=0.00..1.06 rows=6 width=16) (actual time=0.002..0.003 rows=6 loops=1)\n                    Buffers: shared hit=1\nPlanning:\n  Buffers: shared hit=4\nPlanning Time: 0.094 ms\nExecution Time: 21.198 ms",
+      "after_plan": "Seq Scan on mv_fleet_mix  (cost=0.00..1.16 rows=16 width=20) (actual time=0.001..0.001 rows=16 loops=1)\n  Buffers: shared hit=1\nPlanning Time: 0.004 ms\nExecution Time: 0.003 ms"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# Grafana datasource, provisioned at start-up.
+# The uid is fixed because the dashboard JSON refers to it.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: rosetta-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 5s

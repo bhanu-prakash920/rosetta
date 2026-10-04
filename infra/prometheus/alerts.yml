@@ -1,0 +1,175 @@
+# Alert rules for Rosetta.
+#
+# Every metric name and label below is emitted by Aggregator.prometheus() in
+# rosetta/pipeline/metrics.py:
+#
+#   rosetta_events_total{oem, outcome="ok|failed|duplicate"}        counter
+#   rosetta_dead_letters_total{oem, reason}                         counter
+#   rosetta_throughput_events_per_second                            gauge, 10 s average
+#   rosetta_consumer_lag_records{service="normalizer|processor"}    gauge
+#   rosetta_latency_milliseconds{stage="normalize|ingest_to_dashboard|alert",
+#                                quantile="p50|p95|p99"}            gauge, last minute
+#
+# The counters live in the memory of the API process and start again from zero
+# when it restarts. rate() and increase() handle that reset.
+
+groups:
+  - name: rosetta-availability
+    rules:
+      - alert: RosettaApiDown
+        expr: up{job="rosetta-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: The Rosetta API does not answer
+          description: >-
+            Prometheus could not scrape {{ $labels.instance }} for one minute.
+            The dashboard is down, and because the API is the only source of
+            pipeline metrics, every other Rosetta alert is blind until it is back.
+
+      # The lag gauge cannot show that the workers are gone: the API sums the lag of
+      # the workers that report, and the sum over no worker is 0. The API exposes
+      # no worker count on /metrics either. Silence is therefore the only signal.
+      - alert: RosettaWorkersGone
+        expr: rosetta_workers_reporting{service=~"normalizer|processor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: No {{ $labels.service }} has reported for a minute
+          description: >-
+            Every {{ $labels.service }} worker has stopped publishing to ops.metrics.
+            Consumer lag reads 0 in this state, because it is a sum over the
+            workers that report, so this gauge is the signal to watch.
+
+      - alert: RosettaNoEventsNormalised
+        expr: rosetta_throughput_events_per_second == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: No event has been normalised for five minutes
+          description: >-
+            Either nothing is being sent, or no normaliser is running, or the
+            API cannot read the ops.metrics topic. GET /api/v1/system/health
+            reports how many workers are publishing (workers_reporting).
+
+  - name: rosetta-pipeline
+    rules:
+      - alert: RosettaConsumerLagHigh
+        expr: rosetta_consumer_lag_records > 200000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.service }} is {{ $value | humanize }} records behind'
+          description: >-
+            The {{ $labels.service }} consumer group has been more than 200,000
+            records behind for two minutes. Add replicas (the normaliser scales
+            horizontally up to the number of partitions) or look for a slow
+            dependency.
+
+      - alert: RosettaConsumerLagCritical
+        expr: rosetta_consumer_lag_records > 600000
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: '{{ $labels.service }} is {{ $value | humanize }} records behind'
+          description: >-
+            600,000 records is the mark at which the intake gateway pauses
+            producers (rosetta/pipeline/gateway.py). Data is not lost, it is
+            late, and the latency objective cannot be met until the lag is gone.
+
+      - alert: RosettaConsumerLagGrowing
+        expr: deriv(rosetta_consumer_lag_records[5m]) > 500 and rosetta_consumer_lag_records > 50000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: '{{ $labels.service }} falls further behind every second'
+          description: >-
+            The lag of {{ $labels.service }} has grown by more than 500 records
+            per second for five minutes. The consumers are slower than the
+            producers.
+
+      - alert: RosettaDeadLetterRateHigh
+        expr: >-
+          sum by (oem) (rate(rosetta_dead_letters_total[5m]))
+          / clamp_min(sum by (oem) (rate(rosetta_events_total{outcome=~"ok|failed"}[5m])), 1)
+          > 0.01
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'More than 1% of {{ $labels.oem }} events are dead-lettered'
+          description: >-
+            {{ $value | humanizePercentage }} of the events from {{ $labels.oem }}
+            could not be normalised in the last five minutes. Group the dead
+            letters by reason. A firmware update that changed the format shows
+            up as SCHEMA_MISMATCH or TRANSFORM_ERROR.
+
+      - alert: RosettaDeadLetterRateCritical
+        expr: >-
+          sum by (oem) (rate(rosetta_dead_letters_total[5m]))
+          / clamp_min(sum by (oem) (rate(rosetta_events_total{outcome=~"ok|failed"}[5m])), 1)
+          > 0.20
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'More than 20% of {{ $labels.oem }} events are dead-lettered'
+          description: >-
+            {{ $value | humanizePercentage }} of the events from {{ $labels.oem }}
+            are failing. Nothing is lost, the messages wait on the dead-letter
+            topic, but this source is effectively offline until a mapping can
+            read them.
+
+      - alert: RosettaUnknownSource
+        expr: sum by (oem) (increase(rosetta_dead_letters_total{reason="NO_ADAPTER"}[10m])) > 100
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: 'A source without a mapping is sending: {{ $labels.oem }}'
+          description: >-
+            {{ $value | humanize }} messages from {{ $labels.oem }} were parked
+            in ten minutes because no mapping exists. Run the mapping agent for
+            this source, then replay the dead letters.
+
+      - alert: RosettaIngestLatencyHigh
+        expr: rosetta_latency_milliseconds{stage="ingest_to_dashboard", quantile="p95"} > 2000
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: 'p95 ingest-to-dashboard latency is {{ $value | humanize }} ms'
+          description: >-
+            The objective is a 95th percentile below 2 seconds from the moment
+            a message is received to the moment it is visible. It has been
+            above that for two minutes.
+
+      - alert: RosettaNormalizeLatencyHigh
+        expr: rosetta_latency_milliseconds{stage="normalize", quantile="p99"} > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 'p99 normalisation latency is {{ $value | humanize }} ms'
+          description: >-
+            Normalisation alone takes more than a second at the 99th
+            percentile, which leaves too little of the 2 second budget for the
+            rest of the pipeline.
+
+      - alert: RosettaThroughputStalled
+        expr: >-
+          rosetta_throughput_events_per_second == 0
+          and on() sum(rosetta_consumer_lag_records{service="normalizer"}) > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Records are waiting and nothing is being normalised
+          description: >-
+            The raw topic holds records that no normaliser is processing.

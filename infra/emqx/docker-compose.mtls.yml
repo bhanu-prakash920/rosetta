@@ -1,0 +1,44 @@
+# Overlay: MQTT over TLS with client certificates (mTLS).
+#
+#   make certs
+#   docker compose -f docker-compose.yml -f infra/emqx/docker-compose.mtls.yml up --build
+#
+# It replaces the EMQX configuration with infra/emqx/emqx.conf (no plain-text
+# listener, certificate required, access rules from acl.conf), publishes the
+# TLS listener on 127.0.0.1:8883 so a device on this machine can connect, and
+# gives the gateway and the simulator their certificates.
+#
+# Paths are relative to the project root, because Compose resolves them
+# against the directory of the first file on the command line.
+#
+# The private keys in infra/emqx/certs are demo material created by
+# scripts/make_certs.sh. They are readable by every user on this machine, so
+# that containers running under other user ids can read them. Never use them
+# anywhere else.
+
+services:
+  emqx:
+    ports:
+      - "127.0.0.1:${MQTT_TLS_PORT:-8883}:8883"
+    volumes:
+      - ./infra/emqx/emqx.conf:/opt/emqx/etc/emqx.conf:ro
+      - ./infra/emqx/acl.conf:/opt/emqx/etc/acl.conf:ro
+      - ./infra/emqx/certs:/opt/emqx/etc/certs/rosetta:ro
+
+  gateway:
+    environment:
+      ROSETTA_MQTT_URL: mqtts://emqx:8883
+      ROSETTA_MQTT_CA: /etc/rosetta/mqtt/ca.pem
+      ROSETTA_MQTT_CERT: /etc/rosetta/mqtt/client-gateway.pem
+      ROSETTA_MQTT_KEY: /etc/rosetta/mqtt/client-gateway.key
+    volumes:
+      - ./infra/emqx/certs:/etc/rosetta/mqtt:ro
+
+  simulator:
+    environment:
+      ROSETTA_MQTT_URL: mqtts://emqx:8883
+      ROSETTA_MQTT_CA: /etc/rosetta/mqtt/ca.pem
+      ROSETTA_MQTT_CERT: /etc/rosetta/mqtt/client-simulator.pem
+      ROSETTA_MQTT_KEY: /etc/rosetta/mqtt/client-simulator.key
+    volumes:
+      - ./infra/emqx/certs:/etc/rosetta/mqtt:ro

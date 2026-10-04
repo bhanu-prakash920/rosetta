@@ -1,0 +1,875 @@
+{
+  "consumer": {
+    "name": "rosetta-processor"
+  },
+  "interactions": [
+    {
+      "contents": {
+        "content": {
+          "lat": 17.331685,
+          "lon": 78.60904,
+          "map_v": 1,
+          "norm_ts": 1790000001060,
+          "odo_km": 83782.1,
+          "oem": "nordvik",
+          "rx_ts": 1790000001050,
+          "seq": 1,
+          "speed_kmh": 54.2,
+          "ts": 1790000001000,
+          "vin": "7NVGT4B73TA000000"
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a canonical event",
+      "matchingRules": {
+        "body": {
+          "$.lat": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.lon": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.map_v": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.norm_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.odo_km": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "$.rx_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.seq": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.speed_kmh": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.vin": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[A-HJ-NPR-Z0-9]{17}$"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for the source"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {
+          "evt": "HARSH_BRAKE",
+          "lat": 17.331685,
+          "lon": 78.60904,
+          "map_v": 1,
+          "norm_ts": 1790000004060,
+          "odo_km": 83782.1,
+          "oem": "nordvik",
+          "rx_ts": 1790000004050,
+          "seq": 4,
+          "speed_kmh": 54.2,
+          "ts": 1790000004000,
+          "vin": "7NVGT4B73TA000000"
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a canonical event carrying a driving event",
+      "matchingRules": {
+        "body": {
+          "$.evt": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^(HARSH_BRAKE|HARSH_ACCEL|SPEEDING|IDLE|IGNITION_ON|IGNITION_OFF|LOW_SOC|CHARGE_START|CHARGE_STOP)$"
+              }
+            ]
+          },
+          "$.lat": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.lon": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.map_v": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.norm_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.odo_km": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "$.rx_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.seq": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.speed_kmh": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.vin": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[A-HJ-NPR-Z0-9]{17}$"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for the source"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {
+          "dtc": [
+            "P0420"
+          ],
+          "lat": 17.331685,
+          "lon": 78.60904,
+          "map_v": 1,
+          "norm_ts": 1790000005060,
+          "odo_km": 83782.1,
+          "oem": "nordvik",
+          "rx_ts": 1790000005050,
+          "seq": 5,
+          "speed_kmh": 54.2,
+          "ts": 1790000005000,
+          "vin": "7NVGT4B73TA000000"
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a canonical event carrying trouble codes",
+      "matchingRules": {
+        "body": {
+          "$.dtc": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "type",
+                "min": 1
+              }
+            ]
+          },
+          "$.dtc[*]": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[PCBU][0-3][0-9A-F]{3}$"
+              }
+            ]
+          },
+          "$.lat": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.lon": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.map_v": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.norm_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.odo_km": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "$.rx_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.seq": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.speed_kmh": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.vin": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[A-HJ-NPR-Z0-9]{17}$"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for the source"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {
+          "ambient_c": 28.5,
+          "fuel_pct": 82.5,
+          "heading_deg": 195.4,
+          "ignition": true,
+          "lat": 17.331685,
+          "lon": 78.60904,
+          "map_v": 1,
+          "norm_ts": 1790000003060,
+          "odo_km": 83782.1,
+          "oem": "nordvik",
+          "rx_ts": 1790000003050,
+          "seq": 3,
+          "speed_kmh": 54.2,
+          "ts": 1790000003000,
+          "vin": "7NVGT4B73TA000000"
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a canonical event from a combustion vehicle",
+      "matchingRules": {
+        "body": {
+          "$.ambient_c": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.fuel_pct": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.heading_deg": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ignition": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "boolean"
+              }
+            ]
+          },
+          "$.lat": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.lon": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.map_v": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.norm_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.odo_km": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "$.rx_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.seq": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.speed_kmh": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.vin": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[A-HJ-NPR-Z0-9]{17}$"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for the source"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {
+          "ambient_c": 28.5,
+          "heading_deg": 239.4,
+          "ignition": true,
+          "lat": 17.331685,
+          "lon": 78.60904,
+          "map_v": 1,
+          "norm_ts": 1790000002060,
+          "odo_km": 83782.1,
+          "oem": "voltaic",
+          "rx_ts": 1790000002050,
+          "seq": 2,
+          "soc_pct": 65.1,
+          "speed_kmh": 54.2,
+          "ts": 1790000002000,
+          "vin": "8VTEV1A22TA000000"
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a canonical event from an electric vehicle",
+      "matchingRules": {
+        "body": {
+          "$.ambient_c": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.heading_deg": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ignition": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "boolean"
+              }
+            ]
+          },
+          "$.lat": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.lon": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.map_v": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.norm_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.odo_km": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "$.rx_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.seq": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.soc_pct": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.speed_kmh": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.vin": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[A-HJ-NPR-Z0-9]{17}$"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for the source"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    },
+    {
+      "contents": {
+        "content": {
+          "lat": 17.331685,
+          "lon": 78.60904,
+          "map_v": 1,
+          "norm_ts": 1790000006060,
+          "odo_km": 83782.1,
+          "oem": "nordvik",
+          "replayed": true,
+          "rx_ts": 1790000006050,
+          "seq": 6,
+          "speed_kmh": 54.2,
+          "ts": 1790000006000,
+          "vin": "7NVGT4B73TA000000"
+        },
+        "contentType": "application/json",
+        "encoded": false
+      },
+      "description": "a canonical event replayed from the dead-letter queue",
+      "matchingRules": {
+        "body": {
+          "$.lat": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.lon": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.map_v": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.norm_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.odo_km": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.oem": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[a-z0-9_]+$"
+              }
+            ]
+          },
+          "$.replayed": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "boolean"
+              }
+            ]
+          },
+          "$.rx_ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.seq": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.speed_kmh": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "number"
+              }
+            ]
+          },
+          "$.ts": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "integer"
+              }
+            ]
+          },
+          "$.vin": {
+            "combine": "AND",
+            "matchers": [
+              {
+                "match": "regex",
+                "regex": "^[A-HJ-NPR-Z0-9]{17}$"
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "contentType": "application/json"
+      },
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "the normaliser has a live mapping for the source"
+        }
+      ],
+      "type": "Asynchronous/Messages"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.5.8",
+      "models": "1.3.16"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "rosetta-normalizer"
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "tool": "locust",
+  "users": 60,
+  "seconds": 90,
+  "host": "http://127.0.0.1:8765",
+  "requests": 8353,
+  "failures": 0,
+  "p50": 9.0,
+  "p95": 120.0,
+  "p99": 370.0,
+  "rps": 93.7,
+  "per_endpoint": [
+    {
+      "name": "GET /vehicles/{vin}/history",
+      "requests": 199,
+      "failures": 0,
+      "p50": 330.0,
+      "p95": 1100.0,
+      "p99": 1200.0,
+      "rps": 2.2
+    },
+    {
+      "name": "GET /oems",
+      "requests": 386,
+      "failures": 0,
+      "p50": 20.0,
+      "p95": 140.0,
+      "p99": 360.0,
+      "rps": 4.3
+    },
+    {
+      "name": "POST /auth/token",
+      "requests": 3,
+      "failures": 0,
+      "p50": 62.0,
+      "p95": 88.0,
+      "p99": 88.0,
+      "rps": 0.0
+    },
+    {
+      "name": "GET /vehicles",
+      "requests": 1824,
+      "failures": 0,
+      "p50": 11.0,
+      "p95": 87.0,
+      "p99": 250.0,
+      "rps": 20.5
+    },
+    {
+      "name": "GET /mappings/{oem}/{version}",
+      "requests": 245,
+      "failures": 0,
+      "p50": 9.0,
+      "p95": 79.0,
+      "p99": 180.0,
+      "rps": 2.7
+    },
+    {
+      "name": "GET /alerts",
+      "requests": 812,
+      "failures": 0,
+      "p50": 9.0,
+      "p95": 78.0,
+      "p99": 270.0,
+      "rps": 9.1
+    },
+    {
+      "name": "GET /vehicles/{vin}",
+      "requests": 892,
+      "failures": 0,
+      "p50": 7.0,
+      "p95": 77.0,
+      "p99": 290.0,
+      "rps": 10.0
+    },
+    {
+      "name": "GET /map/points",
+      "requests": 1511,
+      "failures": 0,
+      "p50": 7.0,
+      "p95": 72.0,
+      "p99": 200.0,
+      "rps": 16.9
+    },
+    {
+      "name": "GET /dlq/groups",
+      "requests": 259,
+      "failures": 0,
+      "p50": 12.0,
+      "p95": 69.0,
+      "p99": 190.0,
+      "rps": 2.9
+    },
+    {
+      "name": "GET /audit",
+      "requests": 122,
+      "failures": 0,
+      "p50": 8.0,
+      "p95": 68.0,
+      "p99": 210.0,
+      "rps": 1.4
+    },
+    {
+      "name": "GET /series/all",
+      "requests": 472,
+      "failures": 0,
+      "p50": 6.0,
+      "p95": 67.0,
+      "p99": 150.0,
+      "rps": 5.3
+    },
+    {
+      "name": "GET /overview",
+      "requests": 709,
+      "failures": 0,
+      "p50": 6.0,
+      "p95": 64.0,
+      "p99": 260.0,
+      "rps": 7.9
+    },
+    {
+      "name": "GET /map/cells",
+      "requests": 443,
+      "failures": 0,
+      "p50": 6.0,
+      "p95": 59.0,
+      "p99": 150.0,
+      "rps": 5.0
+    },
+    {
+      "name": "GET /batch/quality",
+      "requests": 476,
+      "failures": 0,
+      "p50": 5.0,
+      "p95": 57.0,
+      "p99": 160.0,
+      "rps": 5.3
+    }
+  ],
+  "targets_met": true,
+  "context": {
+    "pipeline_translated_per_s_during_test": 38558,
+    "note": "API and pipeline on the same laptop; rate limit raised for the test, the limiter is covered by tests/security",
+    "api_processes": 1
+  }
+}
