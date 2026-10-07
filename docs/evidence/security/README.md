@@ -25,7 +25,7 @@ Reports marked `-before` keep the original results.
 
 | Finding | Fix | File |
 |---|---|---|
-| 10 npm advisories (vite, vitest, esbuild, puppeteer-core, react-router) | Upgraded to react-router-dom 7.18, vite 7.3, vitest 4.1, puppeteer-core 25.12. Typecheck and build pass | `web/package.json`, `web/package-lock.json`, `web/scripts/screenshots.mjs` (`headless: true`, the old `"new"` value is gone in puppeteer 25) |
+| 10 npm advisories (vite, vitest, esbuild, puppeteer-core, react-router) | Upgraded to react-router-dom 7.18, vite 7.3, vitest 4.1, puppeteer-core 25.12. Typecheck and build pass | `web/package.json`, `web/package-lock.json` |
 | Old, vulnerable Python packages could still be installed (starlette 0.52, python-multipart 0.0.26, cryptography 46, anyio 4.12, requests 2.32, urllib3 2.6, python-dotenv 1.2.1, pytest 9.0.2) | Raised the lower bounds to the first fixed versions. Tests pass on the new versions | `pyproject.toml` |
 | pip and setuptools with known CVEs in the image (their vendored `wheel`, `jaraco.context`, `msgpack`) | `python -m venv --upgrade-deps`, then pip removed from the runtime venv; base image pip and setuptools uninstalled | `Dockerfile` |
 | Debian packages with published fixes (openssl, libssl3 and others) | `apt-get upgrade` in the runtime stage | `Dockerfile` |
@@ -172,7 +172,7 @@ Notes on the ZAP runs:
 | Trivy fs | KSV-0109, KSV-01010 ConfigMap "with secrets" | false positive, `.trivyignore` | Matches `PASS` in `ROSETTA_GOLDEN_PASS_RATE` (a number). Secrets are in a Kubernetes Secret |
 | Trivy fs | KSV-0125 images not from a trusted registry (9, medium) | accepted | The registry is a Helm value. Enforce with an admission policy in the cluster |
 | Trivy fs | AWS-0089 no S3 access logging (low) | accepted | Needs a separate log bucket; CloudTrail covers API access |
-| Trivy image | 271 Debian package CVEs, none fixable | accepted until Debian ships fixes | `apt-get upgrade` takes each fix as soon as it exists. Moving to a Debian 13 base would shrink the list |
+| Trivy image | 271 Debian package CVEs, none fixable | accepted until Debian ships fixes | `apt-get upgrade` takes each fix as soon as it exists, so the stage that runs it is built without the layer cache (`no-cache-filters: runtime` in CI); cached, it would keep shipping the packages that were current when the layer was first built. Moving to a Debian 13 base would shrink the list |
 | bandit | 18 low findings of skipped kinds | accepted | Skips listed and explained in `pyproject.toml` |
 
 ## Suppressions added
@@ -182,3 +182,15 @@ Notes on the ZAP runs:
 - `# nosemgrep: <rule id>` with a one-line reason on the line above, in `rosetta/engine/codegen.py`,
   `infra/docker/healthcheck.py`, `scripts/run_api_load.py`,
   `infra/terraform/modules/eks/main.tf`.
+
+## Since that run
+
+The scans above are a snapshot. New advisories appear against unchanged code, so
+CI re-runs every scanner on each push and the gates stay as they are. What has
+changed since:
+
+| Date | Finding | Fix |
+|---|---|---|
+| 7 October 2026 | `libpcre2-8-0` 10.42-1+deb12u1 in the image, CVE-2026-103111, fixed in 10.42-1+deb12u2. The Dockerfile already upgraded it, but buildx served the layer from the Actions cache, so the image kept the older package | Build the runtime stage without the layer cache (`no-cache-filters: runtime`) |
+| 7 October 2026 | `source-map-js` 1.2.1, GHSA-68fv-2mgg-jv7q, high. A build-time dependency, reached through vite and postcss | Updated to 1.2.2 within the range postcss already allows, so vite is unchanged |
+| 7 October 2026 | `puppeteer-core` was still declared but nothing used it | Removed, with the 24 packages it brought in |

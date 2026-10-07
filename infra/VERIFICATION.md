@@ -22,9 +22,9 @@ Date of the checks: 2026-09-30. Machine: Apple M4, 10 cores, Docker Desktop
 | R3 | data flows end to end over the production adapters | simulator over MQTT (EMQX) -> gateway -> Kafka -> 2 normalisers -> processor -> Redis, TimescaleDB, MinIO | about 4,500 events/s (the Compose simulator is capped at 5,000), consumer lag near 0, 1.7 M rows in the hypertable within minutes, no worker restart |
 | R4 | no message is lost when the gateway is restarted or killed | pause, drain, count; resume; `docker compose restart gateway`; `docker kill --signal KILL`; pause, drain, count | 615,464 sent, 615,464 received by the normalisers. EMQX dropped 0. `docs/evidence/compose_mqtt_restart.json` |
 | R5 | Prometheus scrapes with the bearer token, alert rules load | Prometheus API, `promtool check rules`, `promtool check config` | target up, 12 rules, both checks pass. `/metrics` answers 401 without the token |
-| R6 | logs are centralised | Alloy -> Loki, queried through Grafana | lines from every container of the project, with level, logger and trace id. `docs/screenshots/grafana_logs.png` |
+| R6 | logs are centralised | Alloy -> Loki, queried through Grafana | lines from every container of the project, with level, logger and trace id |
 | R7 | traces join across processes | Tempo search through Grafana | `gateway.submit` -> `normalizer.batch` -> `processor.batch` in one trace; API request spans as `rosetta-api` |
-| R8 | the Grafana dashboard renders with data | headless Chrome | `docs/screenshots/grafana_pipeline.png` |
+| R8 | the Grafana dashboard renders with data | headless Chrome | every panel drew data from Prometheus, with no empty panel and no query error |
 | R9 | the Helm chart | `helm lint` (Helm 3.18.4, in Docker), `helm template` with ServiceMonitor, token and Ingress on, then kubeconform 0.7.0 `-strict` against Kubernetes 1.33 | lint: 0 failed. 21 objects: 20 valid, 1 skipped (ServiceMonitor, a CRD with no built-in schema) |
 | R10 | Terraform | `terraform init -backend=false && terraform validate` (Terraform 1.13.3, in Docker), `terraform fmt -check -recursive` | valid, formatted |
 | R11 | the CI workflow | actionlint 1.7.7 (with shellcheck); every `uses:` pin compared with `git ls-remote` of its tag | clean; 11 actions, every commit matches its tag |

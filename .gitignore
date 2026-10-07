@@ -31,8 +31,7 @@ infra/terraform/**/.terraform/
 infra/terraform/**/*.tfstate*
 .DS_Store
 
-docs/screenshots/
-docs/diagrams/
+# build output, written by `make sbom`
 docs/sbom.txt
 # raw scan reports; the summary beside them is kept
 docs/evidence/security/*
