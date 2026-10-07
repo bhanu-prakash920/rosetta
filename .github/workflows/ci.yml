@@ -518,6 +518,13 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # The runtime stage takes the Debian security fixes published since the
+          # base image was built. Its RUN line never changes, so a cached layer
+          # would be reused for ever and the image would keep shipping the
+          # packages that were current when the layer was first built, while the
+          # Trivy database below is fresh every run. Build that stage without the
+          # cache; the costly web and dependency stages still come from it.
+          no-cache-filters: runtime
       - name: The image runs as a non-root user and carries the UI
         run: |
           test "$(docker run --rm --entrypoint id "$IMAGE" -u)" = "10001"
